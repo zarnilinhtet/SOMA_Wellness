@@ -107,6 +107,24 @@
             height: 600px !important;
             min-height: 600px;
         }
+        
+        /* Custom Tab Styling */
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 0.75rem 1.25rem;
+        }
+        .nav-tabs .nav-link:hover {
+            border-color: transparent;
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: transparent;
+            border-color: #0d6efd;
+            font-weight: bold;
+        }
     </style>
 
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}" />
@@ -116,7 +134,7 @@
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css' rel='stylesheet' />
 </head>
 
-<body>
+<body data-is-instructor="{{ auth()->user()->hasRole('Instructor') ? 'true' : 'false' }}">
 
     <div class="m-4">
         <h3 class="text-center mb-4">Instructor & Class Attendance Record Calendar</h3>
@@ -164,9 +182,10 @@
         <div id="calendar"></div>
     </div>
 
+    <!-- Attendance Details Modal -->
     <div class="modal fade" id="attendanceDetailModal" tabindex="-1" aria-labelledby="attendanceDetailModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
                     <div>
@@ -175,36 +194,95 @@
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+                <div class="modal-body p-0">
+                    <div class="p-3">
+                        <div id="modalLoader" class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
 
-                    <div id="modalLoader" class="text-center my-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                        <div id="modalTableContainer" class="d-none">
+                            <!-- Bootstrap Tabs -->
+                            <nav>
+                                <div class="nav nav-tabs mb-3" id="nav-tab" role="tablist">
+                                    <button class="nav-link active" id="nav-instructor-tab" data-bs-toggle="tab" data-bs-target="#nav-instructor" type="button" role="tab" aria-controls="nav-instructor" aria-selected="true">
+                                        <i class="fas fa-chalkboard-teacher me-2"></i>Instructors (<span id="instCount">0</span>)
+                                    </button>
+                                    <button class="nav-link" id="nav-client-tab" data-bs-toggle="tab" data-bs-target="#nav-client" type="button" role="tab" aria-controls="nav-client" aria-selected="false">
+                                        <i class="fas fa-users me-2"></i>Clients (<span id="clientCount">0</span>)
+                                    </button>
+                                    <button class="nav-link text-danger" id="nav-absent-tab" data-bs-toggle="tab" data-bs-target="#nav-absent" type="button" role="tab" aria-controls="nav-absent" aria-selected="false">
+                                        <i class="fas fa-user-times me-2"></i>Absent / Booked (<span id="absentCount">0</span>)
+                                    </button>
+                                </div>
+                            </nav>
+                            
+                            <div class="tab-content" id="nav-tabContent">
+                                <!-- Instructor Tab Pane -->
+                                <div class="tab-pane fade show active" id="nav-instructor" role="tabpanel" aria-labelledby="nav-instructor-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light text-secondary small text-uppercase">
+                                                <tr>
+                                                    <th>Instructor Name</th>
+                                                    <th>Class</th>
+                                                    <th>Attendance Date</th>
+                                                    <th class="text-center">Status</th>
+                                                    <th class="text-center">Recorded At</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="instructorModalBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Client Attended Tab Pane -->
+                                <div class="tab-pane fade" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light text-secondary small text-uppercase">
+                                                <tr>
+                                                    <th>Client Name</th>
+                                                    <th>Class</th>
+                                                    <th>Attendance Date</th>
+                                                    <th class="text-center">Status</th>
+                                                    <th class="text-center">Recorded At</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="clientModalBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Client Absent/Booked Tab Pane -->
+                                <div class="tab-pane fade" id="nav-absent" role="tabpanel" aria-labelledby="nav-absent-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light text-secondary small text-uppercase">
+                                                <tr>
+                                                    <th>Client Name</th>
+                                                    <th>Class</th>
+                                                    <th>Booked Date</th>
+                                                    <th class="text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="absentModalBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div id="modalEmptyState" class="text-center my-5 d-none">
+                            <i class="fas fa-calendar-times text-muted fa-3x mb-3"></i>
+                            <p class="text-secondary fw-semibold">No attendance or booking logs found for this date.</p>
                         </div>
                     </div>
-
-                    <div id="modalTableContainer" class="d-none">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light text-secondary small text-uppercase">
-                                <tr>
-                                    <th>Instructor</th>
-                                    <th>Class</th>
-                                    <th>Attendance Date</th>
-                                    <th class="text-center">Status</th>
-                                    <th class="text-center">Recorded At</th>
-                                    <!-- <th class="text-center">Payment Status</th>
-                                    <th>Actions</th> -->
-                                </tr>
-                            </thead>
-                            <tbody id="attendanceModalBody">
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div id="modalEmptyState" class="text-center my-5 d-none">
-                        <i class="fas fa-calendar-times text-muted fa-3x mb-3"></i>
-                        <p class="text-secondary fw-semibold">No attendance logs found matching these criteria for this date.</p>
-                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -284,65 +362,94 @@
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById('modalLoader').classList.add('d-none');
-                        let tbody = document.getElementById('attendanceModalBody');
-                        tbody.innerHTML = '';
+                        
+                        let instTbody = document.getElementById('instructorModalBody');
+                        let clientTbody = document.getElementById('clientModalBody');
+                        let absentTbody = document.getElementById('absentModalBody');
+                        
+                        instTbody.innerHTML = '';
+                        clientTbody.innerHTML = '';
+                        absentTbody.innerHTML = '';
+
+                        let instCount = 0;
+                        let clientCount = 0;
+                        let absentCount = 0;
 
                        if (data && data.length > 0) {
                             data.forEach(record => {
-                                let initials = (record.instructor_name || 'A').split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
-                                let badgeClass = record.is_paid === 'Paid' ? 'info' : 'warning';
+                                let initials = (record.person_name || 'A').split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
                                 
-                                let actionFormHtml = '';
-                                if ((record.is_paid === 0 || record.is_paid === 'Unpaid') && !document.body.dataset.isInstructor) {
-                                    let updateUrl = `{{ url('/instructors') }}/${record.instructor_id}/earnings`;
-                                    let csrfToken = '{{ csrf_token() }}';
-                                    
-                                    actionFormHtml = `
-                                        <form action="${updateUrl}" method="POST">
-                                            <input type="hidden" name="_token" value="${csrfToken}">
-                                            <input type="hidden" name="_method" value="PUT">
-                                            <input type="hidden" name="status" value="paid">
-                                            <input type="hidden" name="attendance_id" value="${record.attendance_id}">
-                                            <button type="submit" class="btn btn-link p-0 border-0 bg-transparent"
-                                                onclick="return confirm('Are you sure you want to mark this attendance as Paid?')"
-                                                title="Mark as Paid">
-                                                <span class="badge bg-info px-3 py-2 rounded-pill">Mark as Paid</span>
-                                            </button>
-                                        </form>
-                                    `;
-                                }
-
-                                let row = `
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="avatar-placeholder">${initials}</div>
-                                            <div>
-                                                <div class="fw-bold text-dark">${record.instructor_name || 'N/A'}</div>
+                                if (record.type === 'Instructor' || record.type === 'Client') {
+                                    let row = `
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="avatar-placeholder">${initials}</div>
+                                                <div>
+                                                    <div class="fw-bold text-dark">${record.person_name || 'N/A'}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td class="fw-semibold text-secondary">${record.class_name || 'N/A'}</td>
-                                    <td class="fw-semibold text-secondary">${record.attendance_date}</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-success px-3 py-2 rounded-pill">Attended</span>
-                                    </td>
-                                    <td class="text-center">${record.recorded_at || 'N/A'}</td>
-                                </tr>
-                                `;
-                                    // <td class="text-center">
-                                    //     <span class="badge bg-${badgeClass} px-3 py-2 rounded-pill">
-                                    //         ${record.is_paid}
-                                    //     </span>
-                                    // </td>
-                                    // <td class="text-center">
-                                    //     ${actionFormHtml}
-                                    // </td>
-                                tbody.insertAdjacentHTML('beforeend', row);
+                                        </td>
+                                        <td class="fw-semibold text-secondary">${record.class_name || 'N/A'}</td>
+                                        <td class="fw-semibold text-secondary">${record.attendance_date}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success px-3 py-2 rounded-pill">Attended</span>
+                                        </td>
+                                        <td class="text-center">${record.recorded_at || 'N/A'}</td>
+                                    </tr>
+                                    `;
+
+                                    if (record.type === 'Instructor') {
+                                        instTbody.insertAdjacentHTML('beforeend', row);
+                                        instCount++;
+                                    } else {
+                                        clientTbody.insertAdjacentHTML('beforeend', row);
+                                        clientCount++;
+                                    }
+                                } else if (record.type === 'Absent') {
+                                    let row = `
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="avatar-placeholder">${initials}</div>
+                                                <div>
+                                                    <div class="fw-bold text-dark">${record.person_name || 'N/A'}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="fw-semibold text-secondary">${record.class_name || 'N/A'}</td>
+                                        <td class="fw-semibold text-secondary">${record.attendance_date}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger px-3 py-2 rounded-pill">Absent</span>
+                                        </td>
+                                    </tr>
+                                    `;
+                                    absentTbody.insertAdjacentHTML('beforeend', row);
+                                    absentCount++;
+                                }
                             });
-                            document.getElementById('modalTableContainer').classList.remove('d-none');
-                        } else {
+                        }
+                        
+                        // Handle empty states per tab
+                        if(instCount === 0) {
+                            instTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5"><i class="fas fa-chalkboard-teacher fa-2x mb-2 opacity-50"></i><br>No instructor attendance recorded.</td></tr>`;
+                        }
+                        if(clientCount === 0) {
+                            clientTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5"><i class="fas fa-users fa-2x mb-2 opacity-50"></i><br>No client attendance recorded.</td></tr>`;
+                        }
+                        if(absentCount === 0) {
+                            absentTbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-5"><i class="fas fa-user-check fa-2x mb-2 opacity-50"></i><br>Everyone booked has attended (No Absentees).</td></tr>`;
+                        }
+
+                        // Update Badge Counts
+                        document.getElementById('instCount').innerText = instCount;
+                        document.getElementById('clientCount').innerText = clientCount;
+                        document.getElementById('absentCount').innerText = absentCount;
+
+                        if(instCount === 0 && clientCount === 0 && absentCount === 0) {
                             document.getElementById('modalEmptyState').classList.remove('d-none');
+                        } else {
+                            document.getElementById('modalTableContainer').classList.remove('d-none');
                         }
                     })
                     .catch(error => {
@@ -402,5 +509,4 @@
     });
     </script>
 </body>
-
 </html>

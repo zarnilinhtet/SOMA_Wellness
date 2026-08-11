@@ -2,85 +2,95 @@
 @include('master.sidebar')
 @include('master.nav')
 
-<!-- Include Select2 CSS -->
+<!-- Include Select2 & Flatpickr CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-<div class="container py-5">
-    <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header bg-primary text-white py-3 mb-2 d-flex justify-content-between align-items-center" id="form_header">
-            <h5 class="fw-bold mb-0" id="header_title">Join Class For {{ $user->name ?? 'User' }}</h5>
+<style>
+    /* Custom Soft UI Tweaks */
+    .form-control, .form-select, .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 0.5rem;
+        padding: 0.6rem 1rem;
+        border: 1px solid #e0e4e8;
+    }
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        border-color: #86b7fe;
+    }
+    .soft-card {
+        background-color: #f8f9fa;
+        border-radius: 0.75rem;
+        border: 1px solid #edf1f5;
+    }
+    .step-badge {
+        background-color: #e9ecef;
+        color: #495057;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 8px;
+        font-weight: bold;
+    }
+</style>
+
+<div class="container py-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-2">
+        <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 px-md-5">
+            <h4 class="fw-bold text-dark mb-0">Join Class for <span class="text-primary">{{ $user->name ?? 'User' }}</span></h4>
+            <p class="text-muted small mt-1">Select an available class and schedule dates for the client.</p>
         </div>
 
         {{-- Flash Messages --}}
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show mx-4 mt-3" role="alert">
-                {{ session('success') }}
+            <div class="alert alert-success alert-dismissible fade show mx-4 mx-md-5 mt-3 rounded-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
         @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show mx-4 mt-3" role="alert">
-                {{ session('warning') }}
+            <div class="alert alert-warning alert-dismissible fade show mx-4 mx-md-5 mt-3 rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
         {{-- Dynamic Eligibility Alert --}}
-        <div id="eligibility_alert" class="alert alert-danger alert-dismissible fade show d-none mx-4 mt-3" role="alert">
-            <span id="eligibility_msg"></span>
+        <div id="eligibility_alert" class="alert alert-danger alert-dismissible fade show d-none mx-4 mx-md-5 mt-3 rounded-3" role="alert">
+            <i class="bi bi-shield-exclamation me-2"></i> <span id="eligibility_msg"></span>
         </div>
 
-        <div class="card-body p-4">
+        <div class="card-body px-4 px-md-5 pb-5 pt-3">
             <form action="{{ route('join.class-for-user-submit') }}" id="join_class_form" method="POST">
                 @csrf
-
                 <input type="hidden" name="user_id" id="user_id" value="{{ $user->id }}">
 
-                <div class="row g-3">
-
-                    {{-- 1. SEARCHABLE CLASS SELECTION --}}
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label fw-bold">Select Class <span class="text-danger">*</span></label>
-                        <select name="class_id" id="class_select" class="form-select @error('class_id') is-invalid @enderror" required>
+                <div class="row g-4">
+                    {{-- STEP 1: CLASS SELECTION --}}
+                    <div class="col-md-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="step-badge">1</span>
+                            <h6 class="fw-bold mb-0">Select a Class <span class="text-danger">*</span></h6>
+                        </div>
+                        
+                        <select name="class_id" id="class_select" class="form-select" required>
                             <option value="" disabled {{ old('class_id') ? '' : 'selected' }}>Search or Choose Class...</option>
-                            
                             @foreach ($classes as $class)
                                 @php
-                                    // Completed ဖြစ်နေသော အတန်းများကို ကျော်သွားမည် (Dropdown တွင်မပြပါ)
-                                    if(strtolower($class->status) === 'completed') {
-                                        continue;
-                                    }
+                                    if(strtolower($class->status) === 'completed') continue;
 
-                                    // Fetch current user booking status for this class
-                                    $userBooking = $bookings->where('selected_class_id', $class->id)->first();
-                                    $bookingStatus = $userBooking->status ?? null;
-
-                                    // Compute display status
-                                    if (strtolower($class->status) === 'ongoing' || strtolower($class->status) === 'active') {
-                                        if ($bookingStatus == 'confirmed') {
-                                            $computedStatus = 'Joined';
-                                        } elseif ($bookingStatus == 'waitlisted') {
-                                            $computedStatus = 'Waitlisted';
-                                        } elseif ($bookingStatus == 'cancelled') {
-                                            $computedStatus = 'Cancelled';
-                                        } else {
-                                            $totalCapacity = $class->capacity ?? 0;
-                                            $bookedSlots = $bookingsAll->where('selected_class_id', $class->id)->where('status', 'confirmed')->count();
-                                            $remainingSlots = max(0, $totalCapacity - $bookedSlots);
-                                            $computedStatus = ($remainingSlots <= 0) ? 'Full' : 'Open';
-                                        }
-                                    } else {
-                                        $computedStatus = ucfirst($class->status); // e.g. 'Cancelled'
-                                    }
-
-                                    // Format Data for Dropdown & Preview
+                                    $rawStartDate = \Carbon\Carbon::parse($class->start_date ?? now())->format('Y-m-d');
+                                    $rawEndDate = \Carbon\Carbon::parse($class->end_date ?? now())->format('Y-m-d');
                                     $formattedDate = \Carbon\Carbon::parse($class->start_date ?? now())->format('d M Y');
                                     $startTime = $class->start_time ? \Carbon\Carbon::parse($class->start_time)->format('h:i A') : '--';
                                     $endTime = $class->end_time ? \Carbon\Carbon::parse($class->end_time)->format('h:i A') : '--';
-                                    $formattedTime = "{$startTime} - {$endTime}";
-                                    $formattedDays = is_array($class->days) ? implode(', ', $class->days) : ($class->days ?? 'N/A');
+                                    
+                                    $computedStatus = (strtolower($class->status) === 'ongoing' || strtolower($class->status) === 'active') ? 'Open' : ucfirst($class->status);
                                 @endphp
 
                                 <option value="{{ $class->id }}" 
@@ -88,70 +98,76 @@
                                         data-category="{{ $class->category->name ?? 'N/A' }}"
                                         data-instructor="{{ collect($class->instructor)->pluck('user.name')->filter()->implode(', ') ?: ($class->instructor_code ?? 'CC') }}"
                                         data-start-date="{{ $formattedDate }}"
+                                        data-raw-start-date="{{ $rawStartDate }}"
+                                        data-raw-end-date="{{ $rawEndDate }}"
                                         data-end-date="{{ \Carbon\Carbon::parse($class->end_date ?? now())->format('d M Y') }}"
-                                        data-time="{{ $formattedTime }}"
+                                        data-time="{{ $startTime }} - {{ $endTime }}"
                                         data-days="{{ is_array($class->days) ? implode(' ', $class->days) : ($class->days ?? '') }}"
-                                        data-booked="{{ $bookingsAll->where('selected_class_id', $class->id)->where('status', 'confirmed')->count() }}"
                                         data-capacity="{{ $class->capacity ?? 0 }}"
                                         data-status="{{ $computedStatus }}"
                                         {{ old('class_id') == $class->id ? 'selected' : '' }}>
-                                    
-                                    {{ $class->class_name ?? $class->name }} ({{ $class->category->name ?? 'Category' }}) | 📅 Date: {{ $formattedDate }} | ⏰ Time: {{ $formattedTime }} | 🔄 Days: {{ $formattedDays }} — [{{ $computedStatus }}]
-                                    
+                                    {{ $class->class_name ?? $class->name }} | {{ $formattedDate }} | {{ $startTime }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    {{-- 2. READ-ONLY PREVIEW CARD --}}
-                    <div class="col-md-12 mb-3 d-none" id="class_card_container">
-                        <div class="card border rounded-3 p-3 bg-light shadow-sm">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h5 class="fw-bold text-primary mb-1" id="card_title">Class Name</h5>
-                                    <span class="badge bg-primary text-uppercase me-1" id="card_category">CATEGORY</span>
-                                    <span class="badge bg-secondary" id="card_instructor"><i class="bi bi-person-fill"></i> CC</span>
+                    {{-- CLEAN PREVIEW CARD --}}
+                    <div class="col-md-12 d-none" id="class_card_container">
+                        <div class="soft-card p-3 p-md-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-7 border-end-md mb-3 mb-md-0">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <h5 class="fw-bold text-dark mb-0 me-2" id="card_title">Class Name</h5>
+                                        <span class="badge bg-primary rounded-pill px-2 py-1 small" id="card_category">Category</span>
+                                    </div>
+                                    <p class="text-muted small mb-3"><i class="bi bi-person-video3 me-1"></i> Instructor: <span id="card_instructor" class="fw-medium text-dark">Name</span></p>
+                                    <div id="card_days"></div>
                                 </div>
-                                <span class="badge bg-info text-white text-uppercase px-3 py-2" id="card_badge">OPEN</span>
-                            </div>
-
-                            <div class="text-muted small mb-2">
-                                <i class="bi bi-calendar3 me-1"></i> <span id="card_dates">--</span>
-                                <i class="bi bi-clock me-1 ms-3"></i> <span id="card_time">--</span>
-                            </div>
-
-                            <div class="mb-3" id="card_days"></div>
-
-                            <div class="d-flex justify-content-between border-top pt-2 text-secondary small">
-                                <div>
-                                    <span class="d-block text-uppercase fw-bold text-muted">Studio Occupancy</span>
-                                    <span class="fw-bold fs-6 text-dark" id="card_slots">0 / 0 Slots</span>
-                                </div>
-                                <div class="text-end">
-                                    <span class="d-block text-uppercase fw-bold text-muted">Availability</span>
-                                    <span class="fw-bold text-dark" id="card_availability">Open</span>
+                                <div class="col-md-5 ps-md-4">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.75rem;">Schedule</small>
+                                        <span class="text-dark fw-medium" id="card_dates"><i class="bi bi-calendar3 me-1"></i> --</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.75rem;">Time</small>
+                                        <span class="text-dark fw-medium" id="card_time"><i class="bi bi-clock me-1"></i> --</span>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.75rem;">Status</small>
+                                        <span class="badge bg-info text-white" id="card_badge">OPEN</span>
+                                        <span class="text-muted small ms-2" id="card_slots">(0 Slots)</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- 3. READ-ONLY INPUT FIELDS --}}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Class Category</label>
-                        <input type="text" id="class_category_input" class="form-control bg-light" placeholder="Selected Category" readonly>
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Class Capacity</label>
-                        <input type="text" id="class_capacity_input" class="form-control bg-light" placeholder="Selected Capacity" readonly>
+                    {{-- STEP 2: DATE SELECTION --}}
+                    <div class="col-md-12 mt-4 d-none" id="date_picker_container">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="step-badge">2</span>
+                            <h6 class="fw-bold mb-0">Select Booking Dates <span class="text-danger">*</span></h6>
+                        </div>
+                        
+                        <div class="input-group shadow-sm" style="border-radius: 0.5rem; overflow: hidden;">
+                            <span class="input-group-text bg-white border-end-0 text-primary"><i class="bi bi-calendar-check"></i></span>
+                            <input type="text" id="booking_dates" name="booking_dates" class="form-control border-start-0 ps-0 bg-white" placeholder="Click to choose dates..." readonly required>
+                            <button type="button" class="btn btn-primary px-4" id="select_all_dates">
+                                <i class="bi bi-calendar-plus me-1"></i> Book All Days
+                            </button>
+                        </div>
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-info-circle me-1"></i> The calendar will only allow selecting valid class days (e.g., Mon, Wed).</small>
                     </div>
 
                 </div>
 
-                <div class="mt-4 text-end">
-                    <a href="{{ url()->previous() }}" class="btn btn-outline-secondary me-2">Cancel</a>
-                    <button type="submit" id="submit_btn" class="btn btn-primary px-4" disabled>
-                        Join Class
+                <hr class="my-4 text-muted">
+
+                <div class="text-end">
+                    <a href="{{ url()->previous() }}" class="btn btn-light border px-4 me-2 rounded-3 text-secondary">Cancel</a>
+                    <button type="submit" id="submit_btn" class="btn btn-primary px-4 rounded-3" disabled>
+                        <i class="bi bi-check2-circle me-1"></i> Confirm Booking
                     </button>
                 </div>
             </form>
@@ -159,23 +175,44 @@
     </div>
 </div>
 
-<!-- Include jQuery & Select2 JS -->
+<!-- Scripts remain identical to the previous code -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
     $(document).ready(function () {
-        // 1. Initialize Searchable Select2
         $('#class_select').select2({
             theme: 'bootstrap-5',
             placeholder: 'Search or Choose Class...',
             allowClear: true,
-            width: '100%' // Ensure it takes full width with long text
+            width: '100%'
         });
 
         const userId = $('#user_id').val();
+        let flatpickrInstance = null;
+        let validDatesArray = [];
 
-        // 2. Handle Class Selection
+        function getValidDates(startDate, endDate, allowedDayInts) {
+            let dates = [];
+            let current = new Date(startDate);
+            let end = new Date(endDate);
+            
+            while (current <= end) {
+                if (allowedDayInts.includes(current.getDay())) {
+                    let d = new Date(current);
+                    let month = '' + (d.getMonth() + 1);
+                    let day = '' + d.getDate();
+                    let year = d.getFullYear();
+                    if (month.length < 2) month = '0' + month;
+                    if (day.length < 2) day = '0' + day;
+                    dates.push([year, month, day].join('-'));
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            return dates;
+        }
+
         $('#class_select').on('change', function () {
             const selectedOption = $(this).find(':selected');
             const classId = $(this).val();
@@ -185,102 +222,88 @@
                 return;
             }
 
-            // Read Data Attributes
             const name = selectedOption.data('name');
             const category = selectedOption.data('category');
             const instructor = selectedOption.data('instructor');
             const startDate = selectedOption.data('start-date');
+            const rawStartDate = selectedOption.data('raw-start-date');
+            const rawEndDate = selectedOption.data('raw-end-date');
             const endDate = selectedOption.data('end-date');
             const time = selectedOption.data('time');
-            const days = selectedOption.data('days');
-            const booked = selectedOption.data('booked');
+            const days = selectedOption.data('days'); 
             const capacity = selectedOption.data('capacity');
-            const status = selectedOption.data('status'); // Joined, Waitlisted, Full, Open, Completed, Cancelled
+            const status = selectedOption.data('status');
 
-            // Populate Read-Only Inputs
-            $('#class_category_input').val(category);
-            $('#class_capacity_input').val(capacity + ' Slots');
-
-            // Populate Preview Card
             $('#card_title').text(name);
             $('#card_category').text(category);
-            $('#card_instructor').html('<i class="bi bi-person-fill"></i> ' + instructor);
-            $('#card_dates').text(`${startDate} - ${endDate}`);
-            $('#card_time').text(time);
-            $('#card_slots').text(`${booked} / ${capacity} Slots`);
-            $('#card_availability').text(status);
+            $('#card_instructor').text(instructor);
+            $('#card_dates').html(`<i class="bi bi-calendar3 me-1"></i> ${startDate} — ${endDate}`);
+            $('#card_time').html(`<i class="bi bi-clock me-1"></i> ${time}`);
+            $('#card_slots').text(`(Max: ${capacity} Slots)`);
 
-            // Dynamic Styling for Preview Card Badge & Submit Button based on status
             const $cardBadge = $('#card_badge');
-            const $submitBtn = $('#submit_btn');
-            
-            $cardBadge.removeClass('bg-success bg-info bg-warning bg-danger bg-secondary text-white text-dark').text(status.toUpperCase());
-
-            switch (status) {
-                case 'Joined':
-                    $cardBadge.addClass('bg-success text-white');
-                    break;
-                case 'Open':
-                    $cardBadge.addClass('bg-info text-white');
-                    $submitBtn.removeClass('btn-warning text-dark').addClass('btn-primary').text('Join Class');
-                    break;
-                case 'Full':
-                    $cardBadge.addClass('bg-warning text-dark').text('FULL (WAITLIST OPEN)');
-                    $submitBtn.removeClass('btn-primary').addClass('btn-warning text-dark').text('Join Waitlist');
-                    break;
-                case 'Waitlisted':
-                    $cardBadge.addClass('bg-warning text-dark');
-                    break;
-                case 'Cancelled':
-                    $cardBadge.addClass('bg-danger text-white');
-                    break;
-                default: // Completed or other status
-                    $cardBadge.addClass('bg-secondary text-white');
-                    break;
+            if(status === 'Open') {
+                $cardBadge.removeClass('bg-secondary bg-danger').addClass('bg-success').text('OPEN');
+            } else {
+                $cardBadge.removeClass('bg-success').addClass('bg-secondary').text(status.toUpperCase());
             }
 
-            // Render Days Badges
             let daysHtml = '';
+            const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+            let allowedDayInts = [];
+
             if (typeof days === 'string') {
                 days.split(' ').forEach(day => {
-                    if (day) daysHtml += `<span class="badge bg-dark me-1">${day}</span>`;
+                    if (day) {
+                        daysHtml += `<span class="badge bg-white text-dark border me-1 px-2 py-1 shadow-sm"><i class="bi bi-calendar-event text-primary me-1"></i>${day}</span>`;
+                        if(dayMap[day] !== undefined) allowedDayInts.push(dayMap[day]);
+                    }
                 });
             }
             $('#card_days').html(daysHtml);
+            $('#class_card_container').removeClass('d-none').hide().fadeIn(300);
+            $('#date_picker_container').removeClass('d-none').hide().fadeIn(300);
 
-            // Show Preview Card
-            $('#class_card_container').removeClass('d-none');
+            validDatesArray = getValidDates(rawStartDate, rawEndDate, allowedDayInts);
 
-            // 3. Prevent submission if already joined, on waitlist, completed, or cancelled
-            if (status === 'Joined') {
-                showAlert(`User has already joined this class.`);
-                disableSubmit();
-                return;
-            } else if (status === 'Waitlisted') {
-                showAlert(`User is already on the waitlist for this class waiting for admin approval.`);
-                disableSubmit();
-                return;
-            } else if (status === 'Completed' || status === 'Cancelled') {
-                showAlert(`This class is ${status.toLowerCase()} and cannot be joined.`);
-                disableSubmit();
-                return;
+            if (flatpickrInstance) {
+                flatpickrInstance.destroy();
             }
 
-            // 4. Check Active Package Eligibility via AJAX for Open and Full/Waitlist classes
+            flatpickrInstance = flatpickr("#booking_dates", {
+                mode: "multiple",
+                minDate: rawStartDate,
+                maxDate: rawEndDate,
+                dateFormat: "Y-m-d",
+                enable: [
+                    function(date) {
+                        return allowedDayInts.includes(date.getDay());
+                    }
+                ],
+                onChange: function(selectedDates, dateStr, instance) {
+                    if(selectedDates.length > 0) {
+                        checkEligibility(classId, userId);
+                    } else {
+                        disableSubmit();
+                    }
+                }
+            });
+        });
+
+        $('#select_all_dates').on('click', function() {
+            if(flatpickrInstance && validDatesArray.length > 0) {
+                flatpickrInstance.setDate(validDatesArray, true);
+            }
+        });
+
+        function checkEligibility(classId, userId) {
             $.ajax({
                 url: "{{ route('check.class.eligibility') }}",
                 type: "GET",
-                data: {
-                    class_id: classId,
-                    user_id: userId
-                },
+                data: { class_id: classId, user_id: userId },
                 success: function (response) {
                     if (response.status) {
                         $('#eligibility_alert').addClass('d-none');
-
-                        // Enable Join / Waitlist Class Button & update action URL
-                        let joinRoute = "{{ route('join.class-for-user-submit') }}";
-                        $('#join_class_form').attr('action', joinRoute);
                         $('#submit_btn').prop('disabled', false);
                     } else {
                         showAlert(response.message);
@@ -288,16 +311,15 @@
                     }
                 },
                 error: function () {
-                    showAlert('Failed to check class package eligibility. Please try again.');
+                    showAlert('Failed to check package eligibility. Please try again.');
                     disableSubmit();
                 }
             });
-        });
+        }
 
         function resetFields() {
-            $('#class_card_container').addClass('d-none');
-            $('#class_category_input').val('');
-            $('#class_capacity_input').val('');
+            $('#class_card_container').fadeOut(200, function() { $(this).addClass('d-none'); });
+            $('#date_picker_container').fadeOut(200, function() { $(this).addClass('d-none'); });
             $('#eligibility_alert').addClass('d-none');
             disableSubmit();
         }
@@ -309,11 +331,6 @@
         function showAlert(msg) {
             $('#eligibility_msg').text(msg);
             $('#eligibility_alert').removeClass('d-none');
-        }
-
-        // Trigger on page load if a class was pre-selected
-        if ($('#class_select').val()) {
-            $('#class_select').trigger('change');
         }
     });
 </script>

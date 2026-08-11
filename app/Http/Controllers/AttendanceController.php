@@ -20,10 +20,8 @@ class AttendanceController extends Controller
             $instructorId = $instructor->id;
 
             $query = Attendance::where('instructor_id', $instructorId)->whereNull('client_id');
-
         } else {
             $query = Attendance::where('instructor_id', '!=', NULL)->whereNull('client_id');
-            logger($query->toSql());
         }
 
         // Filter by class_id if provided
@@ -41,19 +39,16 @@ class AttendanceController extends Controller
 
         $events = [];
         foreach ($attendances as $att) {
-            // Since attendance_date is a date-only field (Y-m-d), we use it directly as the start date
             if ($att->attendance_date) {
                 $events[] = [
                     'title' => ($att->instructor->user->name ?? 'Unknown') . ' - Attended',
                     'start' => $att->created_at ? $att->created_at->format('Y-m-d H:i:s') : $att->attendance_date,
-                    'color' => '#28a745',// Green for recorded attendance
+                    'color' => '#28a745',
                     'recorded_at' => $att->created_at ? $att->created_at->format('Y-m-d H:i:s') : null,
                     'is_paid' => $att->is_paid,
                 ];
             }
         }
-
-        logger($events);
         return response()->json($events);
     }
 
@@ -63,20 +58,23 @@ class AttendanceController extends Controller
             return response()->json(['error' => 'Date parameter is required'], 400);
         }
 
-        $date = $request->date; // Layout string format: YYYY-MM-DD
+        $date = $request->date;
 
-        // Eager load instructor and user details + class details
+        // Eager load instructor, class, and client (User) relationships
+        // REMOVED 'whereNull('client_id')' to fetch both client and instructor attendance.
+        $query = Attendance::with(['instructor.user', 'class', 'client'])
+            ->whereDate('attendance_date', $date);
+
         if (auth()->user()->hasRole("Instructor")) {
-            $query = Attendance::with(['instructor.user', 'class'])
-                ->whereDate('attendance_date', $date)
-                ->whereNull('client_id')
-                ->when(auth()->user()->hasRole("Instructor"), function ($q) {
-                    $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
-                    return $q->where('instructor_id', $instructor->id);
-                });
+            $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
+            if ($instructor) {
+                $query->where('instructor_id', $instructor->id);
+            }
         } else {
-            $query = Attendance::with(['instructor.user', 'class'])->where('instructor_id', '!=', NULL)->whereNull('client_id')
-                ->whereDate('attendance_date', $date);
+            // Apply dynamic conditional filter for instructor_id for Admin
+            if (!empty($request->instructor_id)) {
+                $query->where('instructor_id', $request->instructor_id);
+            }
         }
 
         // Apply dynamic conditional filter for class_id
@@ -84,22 +82,29 @@ class AttendanceController extends Controller
             $query->where('class_id', $request->class_id);
         }
 
-        // Apply dynamic conditional filter for instructor_id
-        if (!empty($request->instructor_id)) {
-            $query->where('instructor_id', $request->instructor_id);
-        }
-
-        $attendances = $query->get();
+        $attendances = $query->orderBy('client_id')->get(); // Groups Instructors first (null), then clients
         $formattedData = [];
 
         foreach ($attendances as $att) {
+            $isClient = !is_null($att->client_id);
+
+            // Determine the attendee name and role dynamically
+            $personName = $isClient
+                ? ($att->client->name ?? 'Unknown Client')
+                : ($att->instructor->user->name ?? 'Unknown Instructor');
+
+            $role = $isClient ? 'Client' : 'Instructor';
+
             $formattedData[] = [
-                'instructor_name' => $att->instructor->user->name ?? 'Unknown Instructor',
+                'type' => $role,
+                'person_name' => $personName,
                 'class_name' => $att->class->class_name ?? 'Unknown Class',
                 'attendance_date' => $att->attendance_date,
-                'recorded_at' => $att->created_at ? $att->created_at->format('Y-m-d H:i:s') : null,
+                'recorded_at' => $att->created_at ? $att->created_at->format('Y-m-d h:i A') : null,
                 'is_paid' => $att->is_paid ? 'Paid' : 'Unpaid',
                 'attendance_id' => $att->id,
+                'instructor_id' => $att->instructor_id,
+                'client_id' => $att->client_id,
             ];
         }
         return response()->json($formattedData);
@@ -112,7 +117,6 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $classes = ClassSchedule::with('category')->get();
 
-            // Filter the collection
             $filteredSchedules = $classes->filter(function ($schedule) use ($instructorId) {
                 return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
             });
@@ -128,7 +132,6 @@ class AttendanceController extends Controller
         return view('backends.attendance.record', compact('classes', 'instructors'));
     }
 
-
     public function index()
     {
         if (auth()->user()->hasRole("Instructor")) {
@@ -136,16 +139,13 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $att = ClassSchedule::with('category')->get();
 
-            // Filter the collection
             $filteredSchedules = $att->filter(function ($schedule) use ($instructorId) {
                 return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
             });
 
-            // 1. Collect all necessary IDs from the filtered schedules to avoid querying inside the loop
             $allInstructorIds = $filteredSchedules->pluck('instructor_ids')->flatten()->unique()->toArray();
             $allScheduleIds = $filteredSchedules->pluck('id')->toArray();
 
-            // 2. Fetch all relevant attendance records in ONE query
             $allAttendances = Attendance::whereIn('instructor_id', $allInstructorIds)
                 ->whereIn('class_id', $allScheduleIds)
                 ->whereDate('attendance_date', now()->format('Y-m-d'))
@@ -154,7 +154,6 @@ class AttendanceController extends Controller
                     return $item->instructor_id . '_' . $item->class_id;
                 });
 
-            // 3. Map the data
             foreach ($filteredSchedules as $schedule) {
                 $schedule->instructor = Instructor::with('user')
                     ->whereIn('id', $schedule->instructor_ids ?? [])
@@ -162,26 +161,17 @@ class AttendanceController extends Controller
 
                 foreach ($schedule->instructor as $instructor) {
                     $key = $instructor->id . '_' . $schedule->id;
-
-                    // Get the model
                     $attendanceModel = $allAttendances->get($key)?->first();
-
-                    // Convert to array if it exists, otherwise set to null
                     $instructor->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
                 }
                 $schedule->setRelation('instructor', $schedule->instructor);
             }
-
-            // Reassign $att to the filtered results so the view iteration works properly
             $att = $filteredSchedules;
         } else {
             $att = ClassSchedule::with('category')->latest()->get();
-
-            // 1. Collect all necessary IDs to avoid querying inside the loop
             $allInstructorIds = $att->pluck('instructor_ids')->flatten()->unique()->toArray();
             $allScheduleIds = $att->pluck('id')->toArray();
 
-            // 2. Fetch all relevant attendance records in ONE query
             $allAttendances = Attendance::whereIn('instructor_id', $allInstructorIds)
                 ->whereIn('class_id', $allScheduleIds)
                 ->whereDate('attendance_date', now()->format('Y-m-d'))
@@ -190,7 +180,6 @@ class AttendanceController extends Controller
                     return $item->instructor_id . '_' . $item->class_id;
                 });
 
-            // 3. Map the data
             foreach ($att as $schedule) {
                 $schedule->instructor = Instructor::with('user')
                     ->whereIn('id', $schedule->instructor_ids ?? [])
@@ -198,11 +187,7 @@ class AttendanceController extends Controller
 
                 foreach ($schedule->instructor as $instructor) {
                     $key = $instructor->id . '_' . $schedule->id;
-
-                    // Get the model
                     $attendanceModel = $allAttendances->get($key)?->first();
-
-                    // Convert to array if it exists, otherwise set to null
                     $instructor->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
                 }
                 $schedule->setRelation('instructor', $schedule->instructor);
@@ -212,7 +197,6 @@ class AttendanceController extends Controller
         return view('backends.attendance.attendance', compact('att', 'record'));
     }
 
-    // ၂။ အသစ်ထည့်မယ့် အခန်း
     public function inTime(Request $request)
     {
         $request->validate([
@@ -225,7 +209,6 @@ class AttendanceController extends Controller
         $instructorId = $request->instructor_id;
         $attendanceDate = $request->attendance_date;
 
-        // 1. Record or update the instructor's own attendance marker
         Attendance::updateOrCreate(
             [
                 'class_id' => $classId,
@@ -239,7 +222,6 @@ class AttendanceController extends Controller
         );
 
         if (!auth()->user()->hasRole("Instructor")) {
-            // 2. Find all students who ALREADY checked into this class today
             $existingStudentAttendances = Attendance::where('class_id', $classId)
                 ->where('attendance_date', $attendanceDate)
                 ->whereNotNull('client_id')
@@ -247,11 +229,9 @@ class AttendanceController extends Controller
                 ->distinct()
                 ->get();
 
-            // 3. Get this newly checking-in teacher's percentage commission
             $classInstructor = Instructor::where('id', $instructorId)->first();
             $feePercentage = $classInstructor->fee ?? 0;
 
-            // 4. Retroactively apply fees for this teacher for every student already present
             foreach ($existingStudentAttendances as $studentAtt) {
                 $booking = Booking::with('package')
                     ->where('selected_class_id', $classId)
@@ -279,9 +259,6 @@ class AttendanceController extends Controller
         return back()->with('success', 'Instructor attendance recorded and retroactive fees applied!');
     }
 
-    /**
-     * Record Student Attendance (Checks if at least one instructor has checked in)
-     */
     public function ClientinTime(Request $request)
     {
         $request->validate([
@@ -293,7 +270,6 @@ class AttendanceController extends Controller
         $classId = $request->class_id;
         $attendanceDate = $request->attendance_date;
 
-        // 1. Instructor Role Check
         if (auth()->user()->hasRole("Instructor")) {
             $instructorModel = Instructor::where('instructor_id', auth()->user()->id)->first();
 
@@ -313,7 +289,6 @@ class AttendanceController extends Controller
             }
         }
 
-        // 2. CRITICAL CHECK: Verify if AT LEAST ONE teacher has checked in
         $checkedInTeachers = Attendance::where('class_id', $classId)
             ->where('attendance_date', $attendanceDate)
             ->where('admin_approve', true)
@@ -329,19 +304,15 @@ class AttendanceController extends Controller
             return back()->with('error', $msg);
         }
 
-        // 3. Fetch Class details to identify its Category ID
-        // Note: Ensure your ClassModel (e.g., ClassSchedule or FitnessClass) has category_id or category relationship
-        $classObj = \App\Models\ClassSchedule::with('category')->find($classId); // Adjust model name if needed
+        $classObj = \App\Models\ClassSchedule::with('category')->find($classId);
         $categoryId = $classObj?->category_id;
 
-        // Load Instructors along with their category fee configurations
         $instructorIds = $checkedInTeachers->pluck('instructor_id')->unique();
         $instructors = Instructor::with('categoryFees')
             ->whereIn('id', $instructorIds)
             ->get()
             ->keyBy('id');
 
-        // 4. Loop through clients and calculate category-based fee
         foreach ($request->client_ids as $clientId) {
             $booking = Booking::with('package')
                 ->where('registered_id', $clientId)
@@ -354,20 +325,16 @@ class AttendanceController extends Controller
             foreach ($checkedInTeachers as $teacherAtt) {
                 $teacherId = $teacherAtt->instructor_id;
                 $classInstructor = $instructors->get($teacherId);
-
                 $calculatedFee = 0;
 
                 if ($classInstructor && $categoryId) {
-                    // Find category fee setting for this instructor & category
                     $categoryFeeSetting = $classInstructor->categoryFees
                         ->firstWhere('category_id', $categoryId);
 
                     if ($categoryFeeSetting) {
                         if ($categoryFeeSetting->fee_type === 'percentage') {
-                            // Formula: (Package Price * Percentage) / 100
                             $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
                         } elseif ($categoryFeeSetting->fee_type === 'fixed') {
-                            // Fixed Amount per attended client / class unit
                             $calculatedFee = $categoryFeeSetting->fee_value;
                         }
                     }
@@ -407,7 +374,7 @@ class AttendanceController extends Controller
             ->where('attended', true)
             ->count();
         $monthlyHistory = [];
-        $maxCount = 1; // Prevents division by zero for relative progress bars
+        $maxCount = 1;
 
         for ($i = 0; $i < 12; $i++) {
             $monthDate = Carbon::now()->subMonths($i);
@@ -446,12 +413,10 @@ class AttendanceController extends Controller
 
     public function adminApprove(Request $request, $instructorId)
     {
-        // Validate the request
         $request->validate([
             'class_id' => 'required',
         ]);
 
-        // Find the attendance record for the instructor for the given class and date
         $attendance = Attendance::where('instructor_id', $instructorId)
             ->where('class_id', $request->class_id)
             ->whereDate('attendance_date', now()->format('Y-m-d'))
@@ -461,7 +426,6 @@ class AttendanceController extends Controller
             return back()->with('error', 'Attendance record not found for this instructor.');
         }
 
-        // Update the admin_approve field to true
         $attendance->admin_approve = true;
         $attendance->save();
 
@@ -474,11 +438,10 @@ class AttendanceController extends Controller
     {
         $request->validate(['employee_id' => 'required', 'attendance_date' => 'required']);
 
-        // Find if a record exists for this employee for the date selected
         $selectedDate = \Carbon\Carbon::parse($request->attendance_date)->format('Y-m-d');
 
         $attendance = Attendance::where('employee_id', $request->employee_id)
-            ->whereDate('in_time', $selectedDate) // Using whereDate on the datetime column
+            ->whereDate('in_time', $selectedDate)
             ->first();
 
         if ($attendance) {

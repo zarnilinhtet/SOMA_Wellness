@@ -263,9 +263,14 @@ class ClassScheduleController extends Controller
     {
         $classId = $request->class_id;
         $userId = $request->input('user_id', auth()->id());
+        $bookingDatesStr = $request->input('booking_dates'); // Format: "2023-10-01, 2023-10-08"
 
         if (!$classId) {
             return redirect()->back()->with('warning', 'Invalid class selected.');
+        }
+
+        if (!$bookingDatesStr) {
+            return redirect()->back()->with('warning', 'Please select at least one booking date.');
         }
 
         $class = ClassSchedule::find($classId);
@@ -273,15 +278,17 @@ class ClassScheduleController extends Controller
             return redirect()->back()->with('warning', 'Class not found.');
         }
 
+        // Parse booking dates into an array
+        $bookingDates = explode(', ', $bookingDatesStr);
+        $bookingDates = array_map('trim', $bookingDates);
+        $totalRequestedClasses = count($bookingDates);
+
         $categoryMatchExists = Purchase::whereHas('package', function ($query) use ($class) {
             $query->where('type', $class->category_id);
-        })
-            ->where('registered_id', $userId)
-            ->exists();
+        })->where('registered_id', $userId)->exists();
 
         if (!$categoryMatchExists) {
-            return redirect()->back()
-                ->with('warning', 'The user does not have a package matching this category.');
+            return redirect()->back()->with('warning', 'The user does not have a package matching this category.');
         }
 
         $activePurchase = Purchase::whereHas('package', function ($query) use ($class) {
@@ -289,7 +296,7 @@ class ClassScheduleController extends Controller
         })
             ->where('registered_id', $userId)
             ->where('pay_status', 'confirmed')
-            ->where('class_remaining', '>', 0)
+            ->where('class_remaining', '>=', $totalRequestedClasses) // Check if remaining covers all selected dates
             ->where('expires_at', '>=', now())
             ->where(function ($query) {
                 $query->whereRaw('class_remaining = (SELECT class_count FROM packages WHERE id = purchases.selected_packages_id)')
@@ -301,54 +308,61 @@ class ClassScheduleController extends Controller
 
         if (!$activePurchase) {
             return redirect()->back()
-                ->with('warning', 'No active package found with remaining credits for this class category.');
+                ->with('warning', "No active package found, or not enough credits for {$totalRequestedClasses} selected classes.");
         }
-
-        $existingBooking = Booking::where('registered_id', $userId)
-            ->where('selected_class_id', $class->id)
-            ->whereIn('status', ['confirmed', 'waitlisted'])
-            ->first();
-
-        if ($existingBooking) {
-            $statusMsg = $existingBooking->status === 'confirmed' ? 'already joined' : 'already on the waitlist for';
-            return redirect()->back()->with('warning', "User has {$statusMsg} this class.");
-        }
-
-        $bookedCount = $class->bookings()
-            ->where('status', 'confirmed')
-            ->count();
 
         $classCapacity = $class->capacity ?? 0;
+        $waitlistedCount = 0;
+        $confirmedCount = 0;
 
-        return DB::transaction(function () use ($class, $activePurchase, $userId, $bookedCount, $classCapacity) {
-            $booking = new Booking();
-            $booking->package_id = $activePurchase->selected_packages_id;
-            $booking->registered_id = $userId;
-            $booking->selected_class_id = $class->id;
+        return DB::transaction(function () use ($class, $activePurchase, $userId, $bookingDates, $classCapacity, &$waitlistedCount, &$confirmedCount) {
 
-            if ($bookedCount >= $classCapacity) {
-                $booking->status = 'waitlisted';
-                $booking->save();
+            foreach ($bookingDates as $date) {
+                // Check if already booked for this specific DATE
+                $existingBooking = Booking::where('registered_id', $userId)
+                    ->where('selected_class_id', $class->id)
+                    ->where('booked_date', $date) // Requires `booked_date` column in DB
+                    ->whereIn('status', ['confirmed', 'waitlisted'])
+                    ->first();
 
-                $user = User::find($userId);
-                $admins = User::where('name', 'System Admin')->get();
-                $data = [
-                    'title' => 'New Waitlist Request',
-                    'message' => ($user->name ?? 'User') . ' requested a waitlist slot for ' . ($class->class_name ?? $class->name),
-                    'url' => 'waitlist.index'
-                ];
+                if ($existingBooking) {
+                    continue; // Skip if already booked on this day
+                }
 
-                return redirect()->back()
-                    ->with('warning', 'Class is full. The user was added to the waiting list for admin approval.');
+                // Check capacity per DATE
+                $bookedCount = Booking::where('selected_class_id', $class->id)
+                    ->where('booked_date', $date)
+                    ->where('status', 'confirmed')
+                    ->count();
+
+                $booking = new Booking();
+                $booking->package_id = $activePurchase->selected_packages_id;
+                $booking->registered_id = $userId;
+                $booking->selected_class_id = $class->id;
+                $booking->booked_date = $date; // Save the specific selected date
+
+                if ($bookedCount >= $classCapacity) {
+                    $booking->status = 'waitlisted';
+                    $booking->save();
+                    $waitlistedCount++;
+                } else {
+                    $booking->status = 'confirmed';
+                    $booking->save();
+                    $activePurchase->decrement('class_remaining');
+                    $confirmedCount++;
+                }
             }
 
-            $booking->status = 'confirmed';
-            $booking->save();
+            if ($waitlistedCount > 0 && $confirmedCount == 0) {
+                // Send Waitlist Notification logic...
+                $user = User::find($userId);
+                // ... setup notification code as before ...
 
-            $activePurchase->decrement('class_remaining');
+                return redirect()->back()->with('warning', 'Classes were full on selected dates. Added to waitlist.');
+            }
 
             return redirect()->back()
-                ->with('success', 'User successfully joined the class!');
+                ->with('success', "Successfully joined {$confirmedCount} class(es). " . ($waitlistedCount > 0 ? "Waitlisted for {$waitlistedCount}." : ""));
         });
     }
 

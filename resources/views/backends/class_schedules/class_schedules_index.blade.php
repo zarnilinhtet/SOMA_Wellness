@@ -623,12 +623,19 @@
             ]
         });
 
-        // Initialize Select2 for multiple dropdowns
+        // Initialize Select2 for multiple dropdowns with closeOnSelect fix
         $('.modal').on('shown.bs.modal', function () {
-            $(this).find('.select2-dropdown').select2({
-                dropdownParent: $(this),
-                placeholder: "Search & Select...",
-                allowClear: true
+            $(this).find('.select2-dropdown').each(function() {
+                // multiple attribute ပါ/မပါ စစ်ဆေးပါမည်
+                let isMultiple = $(this).prop('multiple'); 
+                
+                $(this).select2({
+                    dropdownParent: $(this).closest('.modal'),
+                    placeholder: "Search & Select...",
+                    allowClear: true,
+                    // Multiple ဖြစ်ရင် Dropdown ပြန်မပိတ်ပါ (ဆက်တိုက်ရွေးနိုင်ရန်)
+                    closeOnSelect: !isMultiple 
+                });
             });
         });
     });
