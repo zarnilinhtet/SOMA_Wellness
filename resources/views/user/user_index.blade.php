@@ -379,12 +379,12 @@
                             @error('age') <span style="color: red;">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="fw-bold">Password <span class="text-danger">*</span></label>
+                            <label class="fw-bold">Password <br> <span class="text-danger">* Password Must be at least 8 characters *</span></label>
                             <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                             @error('password') <span style="color: red;">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="fw-bold">Confirm Password <span class="text-danger">*</span></label>
+                            <label class="fw-bold">Confirm Password <br> <span class="text-danger">* Password Must be at least 8 characters *</span></label>
                             <input type="password" name="password_confirmation" class="form-control" placeholder="••••••••"
                                 required>
                         </div>

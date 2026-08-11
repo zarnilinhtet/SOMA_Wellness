@@ -35,6 +35,7 @@ class UserController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'password' => Hash::make($request->password),
+                'plain_password' => $request->password, // Admin ကြည့်ရန်အတွက် အစစ်အတိုင်းသိမ်းခြင်း
                 'age' => $request->age,
                 'phone' => $request->phone,
             ]);
@@ -86,8 +87,10 @@ class UserController extends Controller
         $user->age = $request->age;
         $user->phone = $request->phone;
 
+        // Password အသစ်ရိုက်ထည့်ထားမှသာ အသစ်ပြောင်းပေးမည်
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
+            $user->plain_password = $request->password; // Admin ကြည့်ရန်အတွက်ပါ အသစ်ပြောင်းပေးခြင်း
         }
         $user->save();
 
@@ -121,15 +124,37 @@ class UserController extends Controller
 
     public function usersWithPackages()
     {
+        // Payment confirmed ဖြစ်ထားသော User IDs များကို ယူခြင်း
         $purchasedUserIds = \App\Models\Purchase::where('pay_status', 'confirmed')
             ->pluck('registered_id')
             ->unique()
             ->toArray();
 
+        // User များနှင့် သက်ဆိုင်ရာ Roles, Onboarding, Purchases (+ Package) များကို ခေါ်ယူခြင်း
         $users = \App\Models\User::whereIn('id', $purchasedUserIds)
-            ->with(['roles', 'onboarding'])
+            ->with(['roles', 'onboarding', 'purchases' => function ($query) {
+                $query->where('pay_status', 'confirmed')->with('package');
+            }])
             ->latest()
             ->get();
+
+        // User တစ်ယောက်စီအတွက် လိုအပ်သော Data များကို တွက်ချက်ခြင်း
+        $users->map(function ($user) {
+            // Active Package ရှိ/မရှိ စစ်ဆေးခြင်း (ကျန်ရှိသော အတန်းအရေအတွက် 0 ထက်ကြီးရင် Active)
+            $hasActivePackage = $user->purchases->contains(function ($purchase) {
+                return $purchase->remaining_classes > 0;
+            });
+
+            // Package Status သတ်မှတ်ခြင်း
+            $user->package_status = $hasActivePackage ? 'Using Package' : 'Completed';
+
+            // Modal တွင်ပြသရန် Class Counts များ တွက်ချက်ခြင်း (ဝယ်ထားသမျှ Package အားလုံးပေါင်း)
+            $user->total_classes = $user->purchases->sum('total_classes');
+            $user->remaining_classes = $user->purchases->sum('remaining_classes');
+            $user->used_classes = $user->total_classes - $user->remaining_classes;
+
+            return $user;
+        });
 
         $userTypes = \Spatie\Permission\Models\Role::all();
         $allPackages = \App\Models\Package::all();

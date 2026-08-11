@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/post/comment', [CommentController::class, 'store'])->name('post.comment');
     // Package သီးသန့်ဝယ်ထားသော User များကိုပြရန်
     Route::get('/users/with-packages', [UserController::class, 'usersWithPackages'])->name('user.with_packages');
-
+    Route::post('/user-register/reset-password', [UserController::class, 'resetPassword'])->name('user_register.reset_password');
     // သက်ဆိုင်ရာ User ၏ Package အသေးစိတ်ကိုကြည့်ရန် (Route အဟောင်းရှိလျှင် ဖျက်ပြီး ဤစာကြောင်းကိုသာ ထည့်ပါ)
     Route::get('/user/{id}/package/index', [UserController::class, 'userPackageDetails'])->name('user.package.details');
     Route::get('/my-class-history', [HomeController::class, 'myClassHistory'])->name('schedule.page');
