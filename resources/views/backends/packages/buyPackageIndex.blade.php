@@ -32,9 +32,9 @@
             <form action="{{ route('buy.package') }}" method="POST">
                 @csrf
                 
-                {{-- Pass the target User ID to the backend --}}
+                {{-- Hidden Input Values --}}
                 <input type="hidden" name="user_id" value="{{ $user->id }}">
-                <input type="hidden" name="user_discount" value="{{ $user->discount }}">
+                <input type="hidden" name="user_discount" id="user_discount_input" value="0">
 
                 <div class="row g-3">
 
@@ -43,11 +43,41 @@
                         <label class="form-label fw-bold">Choose Package <span class="text-danger">*</span></label>
                         <select name="package_id" id="package_select" class="form-select @error('package_id') is-invalid @enderror" required>
                             <option value="" disabled {{ old('package_id') ? '' : 'selected' }}>Choose Package</option>
+                            
                             @foreach ($packages as $package)
+                                @php
+                                    // Safe lookup for userPackageDiscount per package
+                                    $discountAmt = 0;
+                                    $nowStr = date('Y-m-d H:i:s');
+
+                                    if (isset($userPackageDiscounts)) {
+                                        foreach ($userPackageDiscounts as $d) {
+                                            $pId = is_array($d) ? ($d['package_id'] ?? null) : ($d->package_id ?? null);
+                                            
+                                            if ((int)$pId === (int)$package->id) {
+                                                $expDate = is_array($d) ? ($d['expiration_date'] ?? '') : ($d->expiration_date ?? '');
+                                                $expTime = is_array($d) ? ($d['expiration_time'] ?? '23:59:59') : ($d->expiration_time ?? '23:59:59');
+                                                
+                                                $expDateTime = trim($expDate . ' ' . $expTime);
+                                                
+                                                // Verify expiration boundary
+                                                if (strtotime($nowStr) <= strtotime($expDateTime)) {
+                                                    $discountAmt = (float) (is_array($d) ? ($d['discount_amount'] ?? 0) : ($d->discount_amount ?? 0));
+                                                }
+                                                break;
+                                            }
+                                        }
+                                    }
+                                @endphp
+
                                 <option value="{{ $package->id }}" 
                                         data-price="{{ $package->price }}" 
+                                        data-discount="{{ $discountAmt }}"
                                         {{ old('package_id') == $package->id ? 'selected' : '' }}>
-                                    {{ $package->name }}
+                                    {{ $package->name }} 
+                                    @if($discountAmt > 0)
+                                        ({{ $discountAmt }}% Off Special Discount)
+                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -56,7 +86,7 @@
                         @enderror
                     </div>
 
-                    {{-- PACKAGE PRICE (Original / Base Price) --}}
+                    {{-- BASE PRICE (Remains constant for original price) --}}
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Base Price <span class="text-danger">*</span></label>
                         <input type="number" step="0.01" id="price_input" value="{{ old('price') }}" class="form-control" placeholder="0.00" readonly>
@@ -67,8 +97,12 @@
                         <label class="form-label fw-bold">Choose Payment <span class="text-danger">*</span></label>
                         <select name="payment_id" id="payment_select" class="form-select @error('payment_id') is-invalid @enderror" {{ old('package_id') ? '' : 'disabled' }} required>
                             <option value="" disabled {{ old('payment_id') ? '' : 'selected' }}>Choose Payment</option>
+                            
+                            {{-- Explicit Cash Option --}}
+                            <option value="Cash" {{ old('payment_id') == 'Cash' ? 'selected' : '' }}>Cash</option>
+
                             @foreach ($payments as $payment)
-                                <option value="{{ $payment->name }}" 
+                                <option value="{{ $payment->method }}" 
                                         data-receiver="{{ $payment->name ?? $payment->receiver_name }}" 
                                         data-account="{{ $payment->account_info ?? $payment->account_no }}" 
                                         {{ old('payment_id') == $payment->id ? 'selected' : '' }}>
@@ -81,14 +115,14 @@
                         @enderror
                     </div>
 
-                    {{-- RECEIVER NAME (Auto-populated & Readonly) --}}
-                    <div class="col-md-6 mb-3">
+                    {{-- RECEIVER NAME (Editable when Cash selected) --}}
+                    <div class="col-md-6 mb-3" id="receiver_wrapper">
                         <label class="form-label fw-bold">Receiver Name <span class="text-danger">*</span></label>
                         <input type="text" id="receiver_name_input" value="{{ old('receiver_name') }}" name="receiver_name" class="form-control" placeholder="Receiver Name" readonly>
                     </div>
 
-                    {{-- ACCOUNT NO. (Auto-populated & Readonly) --}}
-                    <div class="col-md-6 mb-3">
+                    {{-- ACCOUNT NO. (Hidden when Cash selected) --}}
+                    <div class="col-md-6 mb-3" id="account_no_wrapper">
                         <label class="form-label fw-bold">Account No. <span class="text-danger">*</span></label>
                         <input type="text" id="account_no_input" value="{{ old('account_info') }}" name="account_info" class="form-control" placeholder="Account No." readonly>
                     </div>
@@ -111,10 +145,10 @@
                         @enderror
                     </div>
 
-                    {{-- TRANSACTION NO. --}}
-                    <div class="col-md-6 mb-3">
+                    {{-- TRANSACTION NO. (Hidden when Cash selected) --}}
+                    <div class="col-md-6 mb-3" id="transaction_no_wrapper">
                         <label class="form-label fw-bold">Transaction No. <span class="text-danger">*</span></label>
-                        <input type="text" value="{{ old('transaction_no') }}" name="transaction_no" class="form-control dynamic-field @error('transaction_no') is-invalid @enderror" placeholder="Enter Transaction No." {{ old('payment_id') ? '' : 'disabled' }} required>
+                        <input type="text" id="transaction_no_input" value="{{ old('transaction_no') }}" name="transaction_no" class="form-control dynamic-field @error('transaction_no') is-invalid @enderror" placeholder="Enter Transaction No." {{ old('payment_id') ? '' : 'disabled' }} required>
                         @error('transaction_no')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -122,9 +156,9 @@
 
                     {{-- USER DISCOUNT ELIGIBLE --}}
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold d-block">User Discount Eligible</label>
-                        <span class="badge {{ $user->discount ? 'bg-success' : 'bg-secondary' }} fs-6">
-                            {{ $user->discount ? 'Yes (' . $user->discount . '% Active)' : 'No' }}
+                        <label class="form-label fw-bold d-block">Package Discount Applied</label>
+                        <span id="discount_badge" class="badge bg-secondary fs-6">
+                            None Applied
                         </span>
                     </div>
 
@@ -170,9 +204,6 @@
 {{-- Dynamic Control Script --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const discountPercent = {{ (float) ($user->discount ?? 0) }};
-    const hasDiscount = discountPercent > 0;
-    const discountRate = discountPercent / 100;
     const maxAvailableCoins = {{ (float) ($user->coins ?? $user->coin ?? 0) }};
 
     const packageSelect = document.getElementById('package_select');
@@ -183,64 +214,123 @@ document.addEventListener('DOMContentLoaded', function () {
     const paymentSelect = document.getElementById('payment_select');
     const receiverInput = document.getElementById('receiver_name_input');
     const accountInput = document.getElementById('account_no_input');
+    const transactionInput = document.getElementById('transaction_no_input');
+
+    const accountWrapper = document.getElementById('account_no_wrapper');
+    const transactionWrapper = document.getElementById('transaction_no_wrapper');
     
+    const discountBadge = document.getElementById('discount_badge');
+    const userDiscountInput = document.getElementById('user_discount_input');
+
     const dynamicFields = document.querySelectorAll('.dynamic-field');
     const submitBtn = document.getElementById('submit_btn');
 
-    // Calculate final price taking into account package price, discount, and coins used
+    // Calculate prices (Base Price, Discount, Coins, Final Price)
     function calculatePrices() {
         const selectedOption = packageSelect.options[packageSelect.selectedIndex];
         
         if (!packageSelect.value) {
             priceInput.value = '';
             finalPriceInput.value = '';
+            discountBadge.className = 'badge bg-secondary fs-6';
+            discountBadge.textContent = 'None Applied';
+            userDiscountInput.value = 0;
             return;
         }
 
         let originalPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
-        let discountedPrice = hasDiscount ? (originalPrice - (originalPrice * discountRate)) : originalPrice;
-        
-        // Show the base price (after % discount if applicable)
-        priceInput.value = discountedPrice.toFixed(2);
+        let discountPercent = parseFloat(selectedOption.getAttribute('data-discount')) || 0;
 
-        // Handle Coin deduction bounds
+        // 1. Base Price display stays unchanged (Original Price)
+        priceInput.value = originalPrice.toFixed(2);
+
+        // 2. Update Badge & Form Value
+        userDiscountInput.value = discountPercent;
+        if (discountPercent > 0) {
+            discountBadge.className = 'badge bg-success fs-6';
+            discountBadge.textContent = 'Yes (' + discountPercent + '% Active)';
+        } else {
+            discountBadge.className = 'badge bg-secondary fs-6';
+            discountBadge.textContent = 'No Discount';
+        }
+
+        // 3. Discount Amount calculation
+        let discountRate = discountPercent / 100;
+        let discountedPrice = discountPercent > 0 ? (originalPrice - (originalPrice * discountRate)) : originalPrice;
+
+        // 4. Coin validation & limits
         let coinsEntered = parseFloat(coinsUsedInput.value) || 0;
 
-        // Cap 1: Cannot enter less than 0
         if (coinsEntered < 0) {
             coinsEntered = 0;
             coinsUsedInput.value = 0;
         }
 
-        // Cap 2: Cannot enter more than user's total available coins
         if (coinsEntered > maxAvailableCoins) {
             coinsEntered = maxAvailableCoins;
             coinsUsedInput.value = maxAvailableCoins;
         }
 
-        // Cap 3: Cannot enter more coins than the discounted price itself
         if (coinsEntered > discountedPrice) {
             coinsEntered = discountedPrice;
             coinsUsedInput.value = discountedPrice;
         }
 
+        // 5. Final Payable Calculation
         let finalPrice = discountedPrice - coinsEntered;
         finalPriceInput.value = finalPrice.toFixed(2);
     }
 
-    // Helper: Update Payment info fields
+    // Toggle Payment Method view (Cash vs Online Methods)
     function updatePaymentDetails() {
         const selectedOption = paymentSelect.options[paymentSelect.selectedIndex];
-        if (paymentSelect.value) {
+        const selectedValue = paymentSelect.value ? paymentSelect.value.trim().toLowerCase() : '';
+        const selectedText = selectedOption ? selectedOption.text.trim().toLowerCase() : '';
+
+        const isCash = selectedValue === 'cash' || selectedText === 'cash';
+
+        if (isCash) {
+            receiverInput.readOnly = false;
+            receiverInput.placeholder = "Enter Receiver Name";
+            
+            accountWrapper.style.display = 'none';
+            transactionWrapper.style.display = 'none';
+
+            accountInput.removeAttribute('required');
+            transactionInput.removeAttribute('required');
+
+            accountInput.value = '';
+            transactionInput.value = '';
+        } else if (paymentSelect.value) {
+            receiverInput.readOnly = true;
+            receiverInput.placeholder = "Receiver Name";
             receiverInput.value = selectedOption.getAttribute('data-receiver') || '';
             accountInput.value = selectedOption.getAttribute('data-account') || '';
+
+            accountWrapper.style.display = '';
+            transactionWrapper.style.display = '';
+
+            accountInput.setAttribute('required', 'required');
+            transactionInput.setAttribute('required', 'required');
         } else {
-            receiverInput.value = '';
-            accountInput.value = '';
+            resetPaymentFields();
         }
     }
 
-    // Step 1: Package Selection Change
+    function resetPaymentFields() {
+        receiverInput.value = '';
+        receiverInput.readOnly = true;
+        accountInput.value = '';
+        transactionInput.value = '';
+
+        accountWrapper.style.display = '';
+        transactionWrapper.style.display = '';
+
+        accountInput.setAttribute('required', 'required');
+        transactionInput.setAttribute('required', 'required');
+    }
+
+    // Dynamic Event Listeners
     packageSelect.addEventListener('change', function () {
         if (this.value) {
             calculatePrices();
@@ -250,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Step 2: Payment Selection Change
     paymentSelect.addEventListener('change', function () {
         if (this.value) {
             updatePaymentDetails();
@@ -261,7 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Step 3: Coin Input Change/Typing
     coinsUsedInput.addEventListener('input', calculatePrices);
 
     function resetPaymentAndInputs() {
@@ -274,8 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function disableRemainingInputs() {
-        receiverInput.value = '';
-        accountInput.value = '';
+        resetPaymentFields();
         dynamicFields.forEach(field => {
             if (field !== coinsUsedInput) field.value = '';
             field.disabled = true;
@@ -283,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.disabled = true;
     }
 
-    // Restore state if returning with old inputs (e.g., after a validation error)
+    // Initialization on Page Load / Validation Restore
     if (packageSelect.value) {
         calculatePrices();
     }

@@ -36,7 +36,22 @@ class HomeController extends Controller
 
     public function class(Request $request)
     {
-        $classes = ClassSchedule::with('category')->get();
+        $today = Carbon::today(); // 2026-08-11
+        $todayDay = $today->format('D'); // e.g., 'Tue' (use 'l' for full name like 'Tuesday')
+
+        // 2. Fetch classes valid for today
+        $classes = ClassSchedule::with('category')
+            ->where('status', 'book')
+            // Check if today is within start_date and end_date
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            // Check if today matches scheduled days (JSON array)
+            ->whereJsonContains('days', $todayDay)
+            // Filter category if needed
+            ->whereHas('category', function ($query) {
+                $query->where('name', 'Yoga');
+            })
+            ->get();
         $allImages = Gallery::all();
 
         foreach ($classes as $class) {

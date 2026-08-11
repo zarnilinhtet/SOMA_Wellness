@@ -29,7 +29,7 @@ return new class extends Migration
             $table->time('end_time');
 
             $table->integer('capacity')->default(15);
-            $table->string('status')->default('upcoming');
+            $table->string('status')->default('book');
             $table->timestamps();
         });
     }

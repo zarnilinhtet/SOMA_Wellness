@@ -256,6 +256,10 @@
             background-color: #2b2b2b;
         }
 
+         .btn-premium-action.btn-teaching:hover {
+            background-color: #2b2b2b;
+        }
+
         .btn-cancel {
             background: #e74c3c;
             color: #ffffff;
@@ -500,6 +504,25 @@
                             <!-- ACTION TRANSACTION HUBS -->
 @auth
     @php
+      $todayDate = \Carbon\Carbon::now()->format('Y-m-d');
+                                        $now = \Carbon\Carbon::now();
+
+                                        // 1. Instructor Attendance Check
+                                        $instructorUserIds = $class->instructor_ids ?? []; 
+
+                                        // Parse class end datetime to see if class is over
+                                        $classEndTime = \Carbon\Carbon::parse($todayDate . ' ' . ($class->end_time ?? $class->time_to ?? '23:59:59'));
+                                        $isClassOver = $now->greaterThan($classEndTime);
+
+                                        // Instructor attendance status: checked in today AND class is not over
+                                        $isInstructorCheckedInToday = false;
+                                        if (!$isClassOver) {
+                                            $isInstructorCheckedInToday = \App\Models\Attendance::where('class_id', $class->id)
+                                                ->whereIn('instructor_id', $instructorUserIds)
+                                                ->whereDate('attendance_date', $todayDate)
+                                                ->where('attended', 1)
+                                                ->exists();
+                                        }
         $confirmedBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'confirmed')->first();
         $waitlistedBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'waitlisted')->first();
         $cancelledBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'cancelled')->first();
@@ -511,6 +534,11 @@
 
     <div class="checkout-action-deck">
         @if ($class->status == 'ongoing')
+         @if($isInstructorCheckedInToday && !$isClassOver)
+            <div class="btn-premium-action btn-teaching">
+            Teaching... 
+            </div>
+         @else
             @if ($confirmedBooking)
                 {{-- USER IS JOINED: Check if cancellation window is open --}}
                 @if ($canCancel)
@@ -578,11 +606,11 @@
                 </a>
 
             @else
-                {{-- AVAILABLE: SHOW JOIN BUTTON --}}
                 <a onClick="joinClass({{ $class->id }})" class="btn-premium-action">
                     Join Class <i class="fas fa-chevron-right ms-2 small"></i>
                 </a>
             @endif
+        @endif
         @endif
     </div>
 @endauth
@@ -631,7 +659,7 @@
                             
                             </div>
                         </div>
-                    @if($waitingApproval)
+@if($waitingApproval)
     @foreach($waitingApproval as $approval)
         <div class="card border-warning-subtle bg-light mb-3 shadow-sm rounded-3">
             {{-- Status Banner --}}

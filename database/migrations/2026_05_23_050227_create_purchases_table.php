@@ -14,9 +14,11 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('registered_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('selected_packages_id')->constrained('packages')->onDelete('cascade');
-            $table->string('account_name')->nullable();
-            $table->string('phone')->nullable();
-            $table->string('transaction_no');
+            $table->string('account_name');
+            $table->string('phone');
+            $table->string('receiver_name');
+            $table->string('receiver_phone');
+            $table->string('transaction_no')->nullable();
             $table->string('screenshot')->nullable();
             $table->string('payment_method');
             $table->string('amount');
