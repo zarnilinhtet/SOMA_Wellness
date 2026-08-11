@@ -58,37 +58,6 @@
                 </div>
                 
                 <div class="row g-2 align-items-end">
-                    <!-- Package Data Dropdown Filter -->
-                    {{-- <div class="col-md-4">
-                        <label class="fw-bold text-muted small mb-1">Search by Package</label>
-                        <select id="packageSearchFilter" class="form-select select2-packages shadow-sm">
-                            <option value="">All Packages</option>
-                            @foreach($allPackages as $pkg)
-                                <option value="{{ $pkg->name }}">
-                                    {{ $pkg->name }} / {{ $pkg->category_name ?? 'General' }} / {{ \Carbon\Carbon::parse($pkg->created_at)->format('d M Y h:i A') }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div> --}}
-
-                    <!-- Class Search Dropdown Filter -->
-                    {{-- <div class="col-md-4">
-                        <label class="fw-bold text-muted small mb-1">Search by Class (Name / Date / Time)</label>
-                        <select id="classSearchFilter" class="form-select select2-classes shadow-sm">
-                            <option value="">All Classes</option>
-                            @if(isset($allClasses))
-                                @foreach($allClasses as $class)
-                                    <option value="{{ $class->class_name }}">
-                                        {{ $class->class_name }} / 
-                                        {{ \Carbon\Carbon::parse($class->start_date)->format('d M Y') }} / 
-                                        {{ \Carbon\Carbon::parse($class->start_time)->format('h:i A') }} - 
-                                        {{ \Carbon\Carbon::parse($class->end_time)->format('h:i A') }}
-                                    </option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div> --}}
-
                     <!-- Status Filter -->
                     <div class="col-md-4">
                         <label class="fw-bold text-muted small mb-1">Package Status</label>
@@ -112,7 +81,7 @@
                                 <th>Phone</th>
                                 <th>Role</th>
                                 <th>Purchased Package(s)</th>
-                                <!-- Hidden Column for Class Filter (အကယ်၍ Class အချက်အလက်များကို Table ထဲထည့်ပြချင်လျှင်သုံးရန်) -->
+                                <!-- Hidden Column for Class Filter -->
                                 <th class="d-none">Classes</th>
                                 <th>Package Status</th>
                                 <th>Actions</th>
@@ -134,9 +103,8 @@
                                         @endif
                                     </td>
                                     
-                                    <!-- Purchased Packages Column (Button & Hidden Search Data) -->
+                                    <!-- Purchased Packages Column -->
                                     <td>
-                                        <!-- DataTables Filter ဖြင့် ရှာ၍ရရန် d-none ဖြင့် ဖွက်ထားသော Package အမည်များ -->
                                         <span class="d-none">
                                             @foreach($user->purchases as $purchase)
                                                 {{ $purchase->package ? $purchase->package->name : '' }}
@@ -144,13 +112,16 @@
                                         </span>
 
                                         @php
-                                            // Modal သို့ ပေးပို့မည့် Package Data များကို JSON ပြောင်းခြင်း
+                                            // Modal သို့ ပေးပို့မည့် Package Data များကို JSON ပြောင်းခြင်း (Null ပြဿနာ ဖြေရှင်းပြီး)
                                             $packageData = $user->purchases->map(function($p) {
+                                                $totalClasses = $p->total_classes ?? ($p->package->class_count ?? 0);
+                                                $remainingClasses = $p->remaining_classes ?? ($p->class_remaining ?? 0);
+                                                
                                                 return [
                                                     'name' => $p->package ? $p->package->name : 'Unknown Package',
-                                                    'total' => $p->total_classes,
-                                                    'remain' => $p->remaining_classes,
-                                                    'status' => $p->remaining_classes > 0 ? 'Active' : 'Completed'
+                                                    'total' => $totalClasses,
+                                                    'remain' => $remainingClasses,
+                                                    'status' => $remainingClasses > 0 ? 'Active' : 'Completed'
                                                 ];
                                             })->toJson();
                                         @endphp
@@ -169,9 +140,7 @@
                                     </td>
 
                                     <!-- Classes (Hidden Search Column) -->
-                                    <td class="d-none">
-                                        <!-- Class နဲ့ သက်ဆိုင်တဲ့ Data တွေကို ဒီနေရာမှာ ထည့်ပါ (Database Structure ပေါ်မူတည်၍) -->
-                                    </td>
+                                    <td class="d-none"></td>
 
                                     <!-- Package Status Column -->
                                     <td>
@@ -230,7 +199,6 @@
 </div>
 
 {{-- MODAL 1: Purchased Packages List --}}
-<!-- ... (Modal 1 unchanged) ... -->
 <div class="modal fade" id="packagesListModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
@@ -265,7 +233,6 @@
 </div>
 
 {{-- MODAL 2: Class Attendance History & Count Number --}}
-<!-- ... (Modal 2 unchanged) ... -->
 <div class="modal fade" id="attendanceHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow">
@@ -349,14 +316,14 @@
         let table = $('#basic-datatables').DataTable({
             "pageLength": 10,
             "columnDefs": [
-                { "targets": [7], "orderable": false } // Action column index အသစ်ပြောင်းပေးထားသည်
+                { "targets": [7], "orderable": false } 
             ],
             "language": {
                 "search": "Search Client Name:" 
             }
         });
 
-        // DataTables Filters (Column 4 = Package Name, Column 5 = Classes(Hidden), Column 6 = Status)
+        // DataTables Filters
         $('#packageSearchFilter').on('change', function() {
             let pkgName = $(this).val();
             table.column(4).search(pkgName).draw(); 
@@ -364,12 +331,12 @@
 
         $('#classSearchFilter').on('change', function() {
             let className = $(this).val();
-            table.column(5).search(className).draw(); // Class column index သည် 5 ဖြစ်ပါသည်
+            table.column(5).search(className).draw(); 
         });
 
         $('#packageStatusFilter').on('change', function() {
             let status = $(this).val();
-            table.column(6).search(status).draw(); // Status column index သည် 6 ဖြစ်ပါသည်
+            table.column(6).search(status).draw(); 
         });
 
         // --------------------------------------------------------
@@ -422,19 +389,7 @@
             
             $('#attendanceTableBody').html('<tr><td colspan="4" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div> Loading...</td></tr>');
 
-            /* 
-             * အမှန်တကယ် Database ချိတ်ဆက်အသုံးပြုမည့်အခါ အောက်ပါ AJAX Code ၏ Comment များကို ဖြုတ်ပြီး အသုံးပြုပါ
-             */
-             
-            // $.ajax({
-            //     url: `/api/user/${userId}/attendance-history`,
-            //     type: 'GET',
-            //     success: function(response) {
-            //         // append rows logic 
-            //     }
-            // });
-
-            // Database မချိတ်ရသေးမီ Testing အတွက် Mockup Data (Delay ဖြင့် ပြသခြင်း)
+            // Database မချိတ်ရသေးမီ Testing အတွက် Mockup Data
             setTimeout(() => {
                 let mockupData = `
                     <tr>

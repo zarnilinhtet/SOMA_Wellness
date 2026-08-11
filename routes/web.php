@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     // သက်ဆိုင်ရာ User ၏ Package အသေးစိတ်ကိုကြည့်ရန် (Route အဟောင်းရှိလျှင် ဖျက်ပြီး ဤစာကြောင်းကိုသာ ထည့်ပါ)
     Route::get('/user/{id}/package/index', [UserController::class, 'userPackageDetails'])->name('user.package.details');
     Route::get('/my-class-history', [HomeController::class, 'myClassHistory'])->name('schedule.page');
+    Route::get('/check-class-eligibility', [App\Http\Controllers\UserController::class, 'checkClassEligibility'])->name('check.class.eligibility');
 });
 
 Route::get('/dashboard', function () {

@@ -6,7 +6,8 @@ use App\Models\Package;
 use App\Models\Purchase;
 use App\Models\User;
 use App\Models\UserPackageDiscount;
-use App\Models\ClassSchedule; // ClassSchedule Model ကို Use လုပ်ထားပါသည်
+use App\Models\ClassSchedule;
+use Carbon\Carbon; // Added for accurate date validations
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -126,13 +127,13 @@ class UserController extends Controller
     public function usersWithPackages()
     {
         // Payment confirmed ဖြစ်ထားသော User IDs များကို ယူခြင်း
-        $purchasedUserIds = \App\Models\Purchase::where('pay_status', 'confirmed')
+        $purchasedUserIds = Purchase::where('pay_status', 'confirmed')
             ->pluck('registered_id')
             ->unique()
             ->toArray();
 
         // User များနှင့် သက်ဆိုင်ရာ Roles, Onboarding, Purchases (+ Package) များကို ခေါ်ယူခြင်း
-        $users = \App\Models\User::whereIn('id', $purchasedUserIds)
+        $users = User::whereIn('id', $purchasedUserIds)
             ->with(['roles', 'onboarding', 'purchases' => function ($query) {
                 $query->where('pay_status', 'confirmed')->with('package');
             }])
@@ -143,7 +144,9 @@ class UserController extends Controller
         $users->map(function ($user) {
             // Active Package ရှိ/မရှိ စစ်ဆေးခြင်း (ကျန်ရှိသော အတန်းအရေအတွက် 0 ထက်ကြီးရင် Active)
             $hasActivePackage = $user->purchases->contains(function ($purchase) {
-                return $purchase->remaining_classes > 0;
+                // Safeguard for inconsistent column naming
+                $remaining = $purchase->remaining_classes ?? $purchase->class_remaining ?? 0;
+                return $remaining > 0;
             });
 
             // Package Status သတ်မှတ်ခြင်း
@@ -151,14 +154,19 @@ class UserController extends Controller
 
             // Modal တွင်ပြသရန် Class Counts များ တွက်ချက်ခြင်း (ဝယ်ထားသမျှ Package အားလုံးပေါင်း)
             $user->total_classes = $user->purchases->sum('total_classes');
-            $user->remaining_classes = $user->purchases->sum('remaining_classes');
+
+            // Calculate remaining safely across both possible column names
+            $user->remaining_classes = $user->purchases->reduce(function ($carry, $purchase) {
+                return $carry + ($purchase->remaining_classes ?? $purchase->class_remaining ?? 0);
+            }, 0);
+
             $user->used_classes = $user->total_classes - $user->remaining_classes;
 
             return $user;
         });
 
-        $userTypes = \Spatie\Permission\Models\Role::all();
-        $allPackages = \App\Models\Package::all();
+        $userTypes = Role::all();
+        $allPackages = Package::all();
 
         // Class Schedule များကို ယူခြင်း
         $allClasses = ClassSchedule::orderBy('start_date', 'desc')->get();
@@ -182,7 +190,8 @@ class UserController extends Controller
 
         foreach ($purchases as $purchase) {
             $classCount = $purchase->package->class_count ?? 0;
-            $remaining = $purchase->class_remaining ?? 0;
+            // Handle inconsistent column names dynamically
+            $remaining = $purchase->remaining_classes ?? $purchase->class_remaining ?? 0;
 
             $totalClassesAllowed += $classCount;
             $totalClassesRemaining += $remaining;
@@ -190,7 +199,7 @@ class UserController extends Controller
             $purchase->used_classes = $classCount - $remaining;
 
             $isExpired = false;
-            $now = now();
+            $now = Carbon::now();
 
             if ($purchase->expires_at && $purchase->expires_at < $now) {
                 $isExpired = true;
@@ -219,5 +228,77 @@ class UserController extends Controller
             'totalClassesRemaining',
             'totalClassesUsed'
         ));
+    }
+
+    /**
+     * Check if a user has an active package eligible for a specific class
+     */
+    public function checkClassEligibility(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required|exists:class_schedules,id',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $class = ClassSchedule::find($request->class_id);
+        $user = User::find($request->user_id);
+
+        $now = Carbon::now();
+        $classCategoryId = $class->category_id;
+
+        // Fetch user's confirmed purchases with package details
+        $purchases = Purchase::with('package')
+            ->where('registered_id', $user->id)
+            ->where('pay_status', 'confirmed')
+            ->get();
+
+        $hasEligiblePackage = false;
+
+        foreach ($purchases as $purchase) {
+            // 1. Check Remaining Classes (Checks BOTH column names to prevent typos)
+            $remaining = $purchase->remaining_classes ?? $purchase->class_remaining ?? 0;
+            $classCount = $purchase->package->class_count ?? 0;
+
+            if ($remaining <= 0) {
+                continue; // Skip if no classes left in this package
+            }
+
+            // 2. Check Expiration Dates
+            $isExpired = false;
+
+            if ($purchase->expires_at && Carbon::parse($purchase->expires_at) < $now) {
+                $isExpired = true;
+            }
+
+            if ($remaining == $classCount && $purchase->fix_expires_at && Carbon::parse($purchase->fix_expires_at) < $now) {
+                $isExpired = true;
+            }
+
+            if ($isExpired) {
+                continue; // Skip if this package is expired
+            }
+
+            // 3. Check Category Match
+            $packageCategoryId = $purchase->package->category_id ?? null;
+
+            // If the package is tied to a specific category, it MUST match the class category.
+            // If the package category is NULL or 0, we assume it's an "All Access/General" package.
+            if ($packageCategoryId && $packageCategoryId != $classCategoryId) {
+                continue; // Skip because categories do not match
+            }
+
+            // If it passes all checks, the user is eligible!
+            $hasEligiblePackage = true;
+            break; // Stop looping, we found a valid package
+        }
+
+        if ($hasEligiblePackage) {
+            return response()->json(['status' => true, 'message' => 'User is eligible.']);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'User does not have an active package matching this class category.'
+        ]);
     }
 }
