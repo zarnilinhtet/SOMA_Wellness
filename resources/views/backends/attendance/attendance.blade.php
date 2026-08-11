@@ -6,6 +6,45 @@
 @include('master.sidebar')
 @include('master.nav')
 <style>
+    /* Animated Toast Styles */
+    .custom-toast {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        animation: slideInRight 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        animation: toastProgress 4s linear forwards;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(110%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes toastProgress {
+        from {
+            width: 100%;
+        }
+
+        to {
+            width: 0%;
+        }
+    }
+
     .flatpickr-calendar {
         box-shadow: none !important;
         border: 1px solid #eee !important;
@@ -216,11 +255,11 @@
                                             </div>
                                             <!-- @if($isClickable) -->
                                             <!-- @else
-                                                                        <button class="btn btn-secondary btn-sm px-3 rounded-pill" type="button" disabled
-                                                                            title="Available 30 mins before start time and up to 30 mins after end time.">
-                                                                            Locked Time
-                                                                        </button>
-                                                                    @endif -->
+                                                                                                                                    <button class="btn btn-secondary btn-sm px-3 rounded-pill" type="button" disabled
+                                                                                                                                        title="Available 30 mins before start time and up to 30 mins after end time.">
+                                                                                                                                        Locked Time
+                                                                                                                                    </button>
+                                                                                                                                @endif -->
                                         @else
                                             <!-- {{ $isClickable ? '' : 'disabled' }} -->
                                             <div class="dropdown">
@@ -369,6 +408,48 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div id="flash-alerts"
+                    style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 320px; max-width: 420px;">
+                    {{-- Session Success Alert --}}
+                    @if (session('success'))
+                        <div
+                            class="custom-toast success-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-shape bg-success text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 38px; height: 38px; flex-shrink: 0;">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">Success</h6>
+                                    <small class="text-muted">{!! session('success') !!}</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close ms-3"
+                                onclick="$(this).closest('.custom-toast').fadeOut()" aria-label="Close"></button>
+                            <div class="toast-progress bg-success"></div>
+                        </div>
+                    @endif
+
+                    {{-- Session Error Alert --}}
+                    @if (session('error'))
+                        <div
+                            class="custom-toast error-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-shape bg-danger text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 38px; height: 38px; flex-shrink: 0;">
+                                    <i class="fas fa-exclamation"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">Error</h6>
+                                    <small class="text-muted">{!! session('error') !!}</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close ms-3"
+                                onclick="$(this).closest('.custom-toast').fadeOut()" aria-label="Close"></button>
+                            <div class="toast-progress bg-danger"></div>
+                        </div>
+                    @endif
+                </div>
                 <div class="row g-3 mb-4">
                     <div class="col-12">
                         <label class="form-label small fw-bold">Select Class:</label>
@@ -411,7 +492,8 @@
                                         {{ $a->class_name }} ({{ \Carbon\Carbon::parse($a->start_date)->format('d M') }} -
                                         {{ \Carbon\Carbon::parse($a->end_date)->format('d M') }} |
                                         {{ \Carbon\Carbon::parse($a->start_time)->format('H:i') }} -
-                                        {{ \Carbon\Carbon::parse($a->end_time)->format('H:i') }}) | {{ $a->days ? implode(', ', $a->days) : 'No Days Set' }}
+                                        {{ \Carbon\Carbon::parse($a->end_time)->format('H:i') }}) |
+                                        {{ $a->days ? implode(', ', $a->days) : 'No Days Set' }}
                                     </option>
                                 @endif
                             @endforeach
@@ -469,7 +551,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-
 <script>
     $(document).ready(function () {
         // ----------------------------------------------------
@@ -481,8 +562,8 @@
         $('#branch-table').DataTable();
 
         // Pass data sets from Blade
-        const allInstructorRecords = @json($instructorRecord ?? ($record ?? []));
-        const allClientRecords = @json($record ?? []);
+        let allInstructorRecords = @json($instructorRecord ?? ($record ?? []));
+        let allClientRecords = @json($record ?? []);
         @php
             $clientsMaster = App\Models\Booking::with('bookingUser')->get();
         @endphp
@@ -492,6 +573,26 @@
 
         const dayMap = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
         const fullDayMap = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
+
+        // Helper: Show Feedback Alert Message inside Audit Container
+        function showAuditAlert(message, type = 'success') {
+            const alertBox = $('#auditAlertContainer');
+            if (alertBox.length) {
+                alertBox.html(`
+                <div class="alert alert-${type} alert-dismissible fade show shadow-sm py-2 px-3 small mb-3" role="alert">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+                // Auto dismiss after 4 seconds
+                setTimeout(() => {
+                    alertBox.find('.alert').fadeOut('slow', function () { $(this).remove(); });
+                }, 4000);
+            } else {
+                alert(message);
+            }
+        }
 
         // Helper: Check if a date string falls on a class day
         function isDateOnClassDay(dateStr, classDaysArray) {
@@ -511,6 +612,28 @@
                 normalizedDays.includes(fullName);
         }
 
+        // Helper: Check if current time is within 30 minutes before start time and 30 minutes after end time
+        function isWithin30MinWindow(startTimeStr, endTimeStr) {
+            if (!startTimeStr || !endTimeStr) return true;
+
+            const now = new Date();
+
+            const parseTimeString = (timeStr) => {
+                const parts = timeStr.split(':');
+                const d = new Date();
+                d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2] || 0, 10), 0);
+                return d;
+            };
+
+            const startTime = parseTimeString(startTimeStr);
+            const endTime = parseTimeString(endTimeStr);
+
+            const allowedStart = new Date(startTime.getTime() - 30 * 60 * 1000);
+            const allowedEnd = new Date(endTime.getTime() + 30 * 60 * 1000);
+
+            return now >= allowedStart && now <= allowedEnd;
+        }
+
         // Helper: Get array of recorded dates for current modal context
         function getRecordedDatesForCurrentContext() {
             const scheduleId = String($('#instructor_schedule_id').val()).trim();
@@ -526,7 +649,7 @@
         }
 
         // ----------------------------------------------------
-        // 2. Flatpickr Initialization with Custom Day Markers
+        // 2. Flatpickr Initialization
         // ----------------------------------------------------
         let instructorFp = flatpickr("#instructor-inline-picker", {
             inline: true,
@@ -549,7 +672,6 @@
             }
         });
 
-        // Update submit button state depending on attendance status
         function updateInstructorDateStatus(selectedDateStr) {
             const scheduleId = String($('#instructor_schedule_id').val()).trim();
             const instructorId = String($('#instructor_id_input').val()).trim();
@@ -590,6 +712,8 @@
             const instructorName = $(this).data('instructor-name');
             const classStartDate = $(this).data('start-date');
             const classEndDate = $(this).data('end-date');
+            const classStartTime = $(this).data('start-time');
+            const classEndTime = $(this).data('end-time');
 
             const rawDays = $(this).data('class-days') || [];
             let classDays = [];
@@ -612,8 +736,8 @@
                 (!classEndDate || todayStr <= classEndDate);
 
             const isTodayClassDay = isDateOnClassDay(todayStr, classDays);
+            const isTimeValid = isWithin30MinWindow(classStartTime, classEndTime);
 
-            // Configure Flatpickr active range
             instructorFp.set('enable', [
                 function (date) {
                     const dStr = flatpickr.formatDate(date, "Y-m-d");
@@ -623,10 +747,7 @@
                 }
             ]);
 
-            // Lock selection to today
             instructorFp.setDate(todayStr, false);
-
-            // Redraw calendar so recorded icons apply to matching dates
             instructorFp.redraw();
 
             const submitBtn = $('#instructorAttendanceForm button[type="submit"]');
@@ -636,6 +757,9 @@
                 submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
             } else if (!isTodayClassDay) {
                 submitBtn.prop('disabled', true).text('Cannot Record: Today is not a class day');
+                submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
+            } else if (!isTimeValid) {
+                submitBtn.prop('disabled', true).text('Cannot Record: Outside 30-Min Window');
                 submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
             } else {
                 updateInstructorDateStatus(todayStr);
@@ -695,13 +819,7 @@
 
             let isTimeValid = true;
             if (auditDate === todayStr && classStartTime && classEndTime) {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                const currentTime = `${hours}:${minutes}:${seconds}`;
-
-                isTimeValid = (currentTime >= classStartTime && currentTime <= classEndTime);
+                isTimeValid = isWithin30MinWindow(classStartTime, classEndTime);
             }
 
             const canCheckIn = isWithinClassRange && isDayValid && isTimeValid;
@@ -738,7 +856,7 @@
 
                 let actionButton = '';
                 if (isRecorded) {
-                    let recordDateObj = matchingRecord.created_at ? new Date(matchingRecord.created_at) : null;
+                    let recordDateObj = matchingRecord.created_at ? new Date(matchingRecord.created_at) : new Date();
                     let formattedDateTime = '';
 
                     if (recordDateObj && !isNaN(recordDateObj)) {
@@ -752,21 +870,23 @@
                     if (!canCheckIn) {
                         if (!isDayValid) {
                             actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Not a Class Day</span>`;
+                        } else if (!isTimeValid) {
+                            actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Outside 30-Min Window</span>`;
                         } else {
                             actionButton = `<span class="badge bg-light text-muted border px-2 py-1">Outside Class Date/Time</span>`;
                         }
                     } else {
-                        actionButton = `<button type="button" class="btn btn-success btn-sm px-3 rounded-pill quickCheckBtn shadow-sm" data-student-id="${studentId}">Check In</button>`;
+                        actionButton = `<button type="button" class="btn btn-success btn-sm px-3 rounded-pill quickCheckBtn shadow-sm" data-student-id="${studentId}" data-student-name="${studentName}">Check In</button>`;
                     }
                 }
 
                 tbody.append(`
-                <tr class="border-bottom align-middle">
-                    <td class="fw-bold text-dark">${studentName}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="text-end">${actionButton}</td>
-                </tr>
-            `);
+            <tr class="border-bottom align-middle">
+                <td class="fw-bold text-dark">${studentName}</td>
+                <td class="text-center">${statusBadge}</td>
+                <td class="text-end">${actionButton}</td>
+            </tr>
+        `);
             });
 
             if (matchCount === 0) {
@@ -775,7 +895,7 @@
         }
 
         // ----------------------------------------------------
-        // 5. Audit Table Event Handlers
+        // 5. Audit Table Event Handlers & Dynamic Check-In (AJAX)
         // ----------------------------------------------------
         $('#auditClassSelect, #auditDateSelect').on('change', function () {
             renderAuditTable();
@@ -785,21 +905,103 @@
             renderAuditTable();
         });
 
-        $(document).on('click', '.quickCheckBtn', function () {
-            const studentId = $(this).data('student-id');
+        function showAuditAlert(message, type = 'success') {
+            const isSuccess = type === 'success';
+
+            const iconClass = isSuccess ? 'fa-check' : 'fa-exclamation';
+            const bgClass = isSuccess ? 'bg-success' : 'bg-danger';
+            const title = isSuccess ? 'Success' : 'Error';
+
+            const toastHtml = `
+        <div class="custom-toast ${type}-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
+            <div class="d-flex align-items-center">
+                <div class="icon-shape ${bgClass} text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; flex-shrink: 0;">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">${title}</h6>
+                    <small class="text-secondary">${message}</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close ms-3" onclick="$(this).closest('.custom-toast').fadeOut('fast', function(){ $(this).remove(); })"></button>
+            <div class="toast-progress ${bgClass}"></div>
+        </div>
+    `;
+
+            // Append toast inside container
+            const $toast = $(toastHtml).appendTo('#flash-alerts');
+
+            // Auto dismiss after 4 seconds
+            setTimeout(() => {
+                $toast.fadeOut('slow', function () {
+                    $(this).remove();
+                });
+            }, 4000);
+        }
+
+        // Quick Check-In via AJAX without closing modal/reloading page
+        $(document).on('click', '.quickCheckBtn', function (e) {
+            e.preventDefault();
+
+            const btn = $(this);
+            // Fixed syntax error: added missing closing parenthesis
+            const studentId = btn.data('student-id');
+            const studentName = btn.data('student-name') || 'Student';
             const classId = $('#auditClassSelect').val();
             const auditDate = $('#auditDateSelect').val();
 
             if (!classId || !auditDate) {
-                alert("Please select both a class and a date.");
+                showAuditAlert("Please select both a class schedule and date before checking in.", "danger");
                 return;
             }
 
-            $('#quick_class_id').val(classId);
-            $('#quick_attendance_date').val(auditDate);
-            $('#quick_client_id').val(studentId);
+            // Disable button briefly to prevent double submits
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking in...');
 
-            $('#quickCheckInForm').submit();
+            // Perform AJAX Request matching the form route
+            $.ajax({
+                url: $('#quickCheckInForm').attr('action') || "{{ route('attendances.ClientinTime') }}",
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    class_id: classId,
+                    attendance_date: auditDate,
+                    // Sent as array to satisfy 'client_ids' validation rule in Laravel
+                    'client_ids[]': [studentId],
+                    client_ids: [studentId],
+                    client_id: studentId
+                },
+                success: function (response) {
+                    // Update local memory dataset
+                    const newRecord = {
+                        class_id: classId,
+                        attendance_date: auditDate,
+                        client_id: studentId,
+                        created_at: new Date().toISOString()
+                    };
+                    allClientRecords.push(newRecord);
+
+                    // Re-render table locally
+                    renderAuditTable();
+
+                    // Display Inline Success Message
+                    showAuditAlert(`Successfully checked in <strong>${studentName}</strong>!`, 'success');
+                },
+                error: function (xhr) {
+                    btn.prop('disabled', false).text('Check In');
+                    let errorMsg = 'An error occurred while trying to check in.';
+
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        // Extract first validation error key & message
+                        const firstKey = Object.keys(xhr.responseJSON.errors)[0];
+                        errorMsg = xhr.responseJSON.errors[firstKey][0];
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+
+                    showAuditAlert(`<strong>Error:</strong> ${errorMsg}`, 'danger');
+                }
+            });
         });
     });
 </script>

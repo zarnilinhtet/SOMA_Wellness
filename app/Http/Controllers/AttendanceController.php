@@ -287,25 +287,33 @@ class AttendanceController extends Controller
         $request->validate([
             'class_id' => 'required',
             'client_ids' => 'required|array',
-            'attendance_date' => 'required',
+            'attendance_date' => 'required|date',
         ]);
-
 
         $classId = $request->class_id;
         $attendanceDate = $request->attendance_date;
 
+        // 1. Instructor Role Check
         if (auth()->user()->hasRole("Instructor")) {
+            $instructorModel = Instructor::where('instructor_id', auth()->user()->id)->first();
+
             $inst = Attendance::where('class_id', $classId)
                 ->where('attendance_date', $attendanceDate)
                 ->where('admin_approve', true)
-                ->where('instructor_id', Instructor::where('instructor_id', auth()->user()->id)->first()->id)
+                ->where('instructor_id', $instructorModel?->id)
                 ->whereNull('client_id')
-                ->get();
-            if ($inst->isEmpty()) {
-                return back()->with('error', 'You have not checked in for this class yet. Or Wainting For Admin Approved! Student attendance cannot be recorded.');
+                ->exists();
+
+            if (!$inst) {
+                $msg = 'You have not checked in for this class yet or are waiting for Admin Approval!';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => $msg], 422);
+                }
+                return back()->with('error', $msg);
             }
         }
-        // 1. CRITICAL CHECK: Verify if AT LEAST ONE teacher has checked in for this class today
+
+        // 2. CRITICAL CHECK: Verify if AT LEAST ONE teacher has checked in
         $checkedInTeachers = Attendance::where('class_id', $classId)
             ->where('attendance_date', $attendanceDate)
             ->where('admin_approve', true)
@@ -314,26 +322,56 @@ class AttendanceController extends Controller
             ->get();
 
         if ($checkedInTeachers->isEmpty()) {
-            return back()->with('error', 'No instructors have checked in for this class yet. Or Wainting For Admin Approved! Student attendance cannot be recorded.');
+            $msg = 'No instructors have checked in for this class yet or waiting for Admin Approval!';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
         }
 
-        foreach ($request->client_ids as $clientId) {
-            // 2. Get the student's active package price and ensure they have classes remaining
+        // 3. Fetch Class details to identify its Category ID
+        // Note: Ensure your ClassModel (e.g., ClassSchedule or FitnessClass) has category_id or category relationship
+        $classObj = \App\Models\ClassSchedule::with('category')->find($classId); // Adjust model name if needed
+        $categoryId = $classObj?->category_id;
 
+        // Load Instructors along with their category fee configurations
+        $instructorIds = $checkedInTeachers->pluck('instructor_id')->unique();
+        $instructors = Instructor::with('categoryFees')
+            ->whereIn('id', $instructorIds)
+            ->get()
+            ->keyBy('id');
+
+        // 4. Loop through clients and calculate category-based fee
+        foreach ($request->client_ids as $clientId) {
             $booking = Booking::with('package')
                 ->where('registered_id', $clientId)
                 ->where('selected_class_id', $classId)
                 ->where('status', 'confirmed')
                 ->first();
 
-            // 3. Loop through every instructor who has already checked in and record attendance + fee
+            $packagePrice = $booking?->package?->price ?? 0;
+
             foreach ($checkedInTeachers as $teacherAtt) {
                 $teacherId = $teacherAtt->instructor_id;
+                $classInstructor = $instructors->get($teacherId);
 
-                $classInstructor = Instructor::where('id', $teacherId)->first();
+                $calculatedFee = 0;
 
-                $feePercentage = $classInstructor->fee ?? 0;
-                $calculatedFee = ($booking->package->price * $feePercentage) / 100;
+                if ($classInstructor && $categoryId) {
+                    // Find category fee setting for this instructor & category
+                    $categoryFeeSetting = $classInstructor->categoryFees
+                        ->firstWhere('category_id', $categoryId);
+
+                    if ($categoryFeeSetting) {
+                        if ($categoryFeeSetting->fee_type === 'percentage') {
+                            // Formula: (Package Price * Percentage) / 100
+                            $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
+                        } elseif ($categoryFeeSetting->fee_type === 'fixed') {
+                            // Fixed Amount per attended client / class unit
+                            $calculatedFee = $categoryFeeSetting->fee_value;
+                        }
+                    }
+                }
 
                 Attendance::updateOrCreate(
                     [
@@ -351,7 +389,16 @@ class AttendanceController extends Controller
             }
         }
 
-        return back()->with('success', 'Client Attendance recorded and instructor fees applied!');
+        $successMsg = 'Client Attendance recorded and category fee rates applied!';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => $successMsg
+            ], 200);
+        }
+
+        return back()->with('success', $successMsg);
     }
 
     public function attendanceStats()

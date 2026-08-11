@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('account_name');
             $table->string('phone');
             $table->string('receiver_name');
-            $table->string('receiver_phone');
+            $table->string('receiver_phone')->nullable();
             $table->string('transaction_no')->nullable();
             $table->string('screenshot')->nullable();
             $table->string('payment_method');

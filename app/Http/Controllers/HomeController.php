@@ -269,55 +269,51 @@ class HomeController extends Controller
 
     public function paymentSubmit(Request $request)
     {
-        $request->validate([
-            'sender_name' => 'required|min:3|max:255',
-            'sender_phone' => 'required',
-            // 'transaction_id' => 'required',
-            // 'screenshot' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        // Remove dd($request->receiver_name); once you're done testing
+
+        // 1. Validate ALL incoming fields, including receiver_name
+        $validated = $request->validate([
+            'registered_id' => 'required|exists:users,id',
+            'package' => 'required|exists:packages,id',
+            'sender_name' => 'required|string|max:255',
+            'sender_phone' => 'required|string',
+            'receiver_name' => 'nullable|string|max:255', // <-- ADD THIS RULE
+            'amount' => 'required|numeric',
+            'transaction_id' => 'nullable|string',
+            'gateway_method' => 'required|string',
+            'userDiscount' => 'nullable|numeric',
+            'coin_used' => 'nullable|numeric|min:0',
+            'screenshot' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $screenshotPath = null;
+        // 2. Fetch package details
+        $packageModel = Package::findOrFail($request->package);
 
-        if ($request->hasFile('screenshot') && $request->file('screenshot')->isValid()) {
-            $file = $request->file('screenshot');
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $destination = public_path('uploads/slips');
+        // 3. Create the purchase record
+        DB::transaction(function () use ($request, $packageModel) {
 
-            if (!file_exists($destination)) {
-                mkdir($destination, 0777, true);
-            }
+            Purchase::create([
+                'registered_id' => $request->registered_id,
+                'selected_packages_id' => $request->package,
+                'account_name' => $request->sender_name,
+                'receiver_name' => $request->receiver_name ?? 'N/A', // <-- Fallback ensures MySQL never receives raw NULL
+                'amount' => $request->amount,
+                'phone' => $request->sender_phone,
+                'transaction_no' => $request->transaction_id ?? 'CASH-' . strtoupper(uniqid()),
+                'payment_method' => $request->gateway_method,
+                'user_discount' => $request->userDiscount ?? 0,
+                'coin_used' => $request->coin_used ?? 0,
+                'class_remaining' => $packageModel->class_count,
+                'expires_at' => now()->addDays($packageModel->duration),
+                'fix_expires_at' => now()->addDays($packageModel->fix_duration),
+            ]);
 
-            $file->move($destination, $filename);
-            $screenshotPath = 'uploads/slips/' . $filename;
-        }
+            // 4. Loyalty Coin Deduction Logic
+            $coinsRequested = (float) $request->coin_used;
 
-        $data = $request->all();
+            if ($coinsRequested > 0) {
+                $userId = $request->registered_id;
 
-        Purchase::create([
-            'registered_id' => $data['registered_id'],
-            'selected_packages_id' => $data['package'],
-            'payment_method' => $data['gateway_method'],
-            'account_name' => $data['sender_name'],
-            'phone' => $data['sender_phone'],
-            'transaction_no' => $data['transaction_id'],
-            'amount' => $data['amount'],
-            'coin_used' => $data['coin_used'] ?? 0,
-            'screenshot' => $screenshotPath,
-            'class_remaining' => Package::findOrFail($data['package'])->class_count,
-            'expires_at' => now()->addDays(Package::findOrFail($data['package'])->duration),
-            'fix_expires_at' => now()->addDays(Package::findOrFail($data['package'])->fix_duration),
-            'user_discount' => $data['userDiscount'],
-        ]);
-
-        if ($request->redeem == '1') {
-            $userId = $data['registered_id'];
-            $coinsRequested = (float) $data['coin_used'];
-
-            if ($coinsRequested <= 0) {
-                return back()->withErrors(['coin_used' => 'Please enter a valid coin amount to redeem.']);
-            }
-
-            DB::transaction(function () use ($userId, $coinsRequested) {
                 $user = User::where('id', $userId)->lockForUpdate()->firstOrFail();
 
                 if ($user->coins < $coinsRequested) {
@@ -346,6 +342,7 @@ class HomeController extends Controller
                         $pointRecord->points = $remaining;
                         $pointRecord->is_redeemed = ($remaining <= 0);
                         $pointRecord->save();
+
                         $pointsToDeduct = 0;
                     } else {
                         $pointsToDeduct = round($pointsToDeduct - $availableInBatch, 4);
@@ -358,23 +355,11 @@ class HomeController extends Controller
                 if ($pointsToDeduct > 0) {
                     throw new \Exception("Mismatch between total user balance and active points batches.");
                 }
-            });
-        }
+            }
+        });
 
-        $data = [
-            'title' => 'Payment Submitted',
-            'message' => auth()->user()->name . ' has submitted a payment for ' . Package::findOrFail($data['package'])->name,
-            'url' => 'purchases.manage.page'
-        ];
-
-        $admins = User::where('name', 'System Admin')->get();
-        foreach ($admins as $admin) {
-            $admin->notify(new AdminNotification($data));
-        }
-
-        return redirect()
-            ->route('history.page')
-            ->with('success', 'Payment submitted successfully!');
+        return redirect()->route('history.page')
+            ->with('success', 'Purchase completed successfully.');
     }
 
     public function history(Request $request)

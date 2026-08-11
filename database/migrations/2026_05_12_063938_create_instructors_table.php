@@ -9,13 +9,9 @@ return new class extends Migration {
     {
         Schema::create('instructors', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('instructor_id')
-                ->unique()
-                ->constrained('users', 'id')
-                ->onDelete('cascade');
+            $table->foreignId('instructor_id')->unique()->constrained('users', 'id')->onDelete('cascade');
             $table->string('specialty')->nullable();
-            $table->integer('fee');
-            $table->integer('total_earnings')->nullable()->default(0);
+            $table->integer('total_earnings')->default(0);
             $table->softDeletes();
             $table->timestamps();
         });

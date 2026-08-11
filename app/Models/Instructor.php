@@ -8,12 +8,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Instructor extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
-    protected $fillable = ['instructor_id', 'specialty','fee', 'total_earnings'];
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = ['instructor_id', 'specialty', 'total_earnings'];
 
     public function user()
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function categoryFees()
+    {
+        return $this->hasMany(InstructorCategoryFee::class, 'instructor_id');
     }
 }

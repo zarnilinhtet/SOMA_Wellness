@@ -160,7 +160,7 @@ class ReportController extends Controller
                     'id' => $instructor->id,
                     'name' => $instructor->user->name ?? 'Unknown',
                     'total_classes' => $assignedClasses->count(),
-                    'total_fee' => number_format($totalFee, 2)
+                    'total_fee' => $totalFee
                 ];
             }
         });
@@ -191,7 +191,7 @@ class ReportController extends Controller
             $userBreakdown = $records->map(function ($att) {
                 return [
                     'user_name' => $att->client->name ?? 'Unknown Student',
-                    'fee_amount' => number_format($att->fee_amount, 2),
+                    'fee_amount' => $att->fee_amount,
                     'date' => Carbon::parse($att->attendance_date)->format('d M Y')
                 ];
             })->values();
@@ -202,7 +202,7 @@ class ReportController extends Controller
                 'start_date' => Carbon::parse($classSchedule->start_date)->format('d M Y'),
                 'end_date' => Carbon::parse($classSchedule->end_date)->format('d M Y'),
                 'time' => Carbon::parse($classSchedule->start_time)->format('h:i A') . ' - ' . Carbon::parse($classSchedule->end_time)->format('h:i A'),
-                'total_fee' => number_format($totalFee, 2),
+                'total_fee' => $totalFee,
                 'total_clients' => $total_clients,
                 'breakdown' => $userBreakdown
             ];
@@ -250,7 +250,7 @@ class ReportController extends Controller
             $userBreakdown = $classAttendances->map(function ($att) {
                 return [
                     'user_name' => $att->client->name ?? 'Unknown Student',
-                    'fee_amount' => number_format($att->fee_amount, 2),
+                    'fee_amount' => $att->fee_amount,
                     'date' => Carbon::parse($att->attendance_date)->format('d M Y')
                 ];
             })->values();

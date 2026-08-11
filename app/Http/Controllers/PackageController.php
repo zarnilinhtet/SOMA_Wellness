@@ -85,15 +85,17 @@ class PackageController extends Controller
             'account_name' => 'required|string',
             'phone_no' => 'required',
             'price' => 'required',
-            'transaction_no' => 'required',
             'payment_id' => 'required',
             'user_discount' => 'required',
+            'receiver_name' => 'required|string',
         ]);
         Purchase::create([
             'registered_id' => $request->user_id,
             'selected_packages_id' => $request->package_id,
             'account_name' => $request->account_name,
             'amount' => $request->price,
+            'receiver_name' => $request->receiver_name,
+            'receiver_phone' => $request->receiver_phone,
             'phone' => $request->phone_no,
             'transaction_no' => $request->transaction_no,
             'payment_method' => $request->payment_id,
