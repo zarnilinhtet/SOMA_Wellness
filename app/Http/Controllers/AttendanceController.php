@@ -8,8 +8,8 @@ use App\Models\ClassSchedule;
 use App\Models\Instructor;
 use App\Models\Purchase;
 use Auth;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
@@ -19,10 +19,10 @@ class AttendanceController extends Controller
             $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
             $instructorId = $instructor->id;
 
-            $query = Attendance::where('instructor_id', $instructorId);
+            $query = Attendance::where('instructor_id', $instructorId)->whereNull('client_id');
 
         } else {
-            $query = Attendance::where('instructor_id', '!=', NULL);
+            $query = Attendance::where('instructor_id', '!=', NULL)->whereNull('client_id');
             logger($query->toSql());
         }
 
@@ -69,12 +69,13 @@ class AttendanceController extends Controller
         if (auth()->user()->hasRole("Instructor")) {
             $query = Attendance::with(['instructor.user', 'class'])
                 ->whereDate('attendance_date', $date)
+                ->whereNull('client_id')
                 ->when(auth()->user()->hasRole("Instructor"), function ($q) {
                     $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
                     return $q->where('instructor_id', $instructor->id);
                 });
         } else {
-            $query = Attendance::with(['instructor.user', 'class'])->where('instructor_id', '!=', NULL)
+            $query = Attendance::with(['instructor.user', 'class'])->where('instructor_id', '!=', NULL)->whereNull('client_id')
                 ->whereDate('attendance_date', $date);
         }
 
@@ -127,28 +128,20 @@ class AttendanceController extends Controller
         return view('backends.attendance.record', compact('classes', 'instructors'));
     }
 
-    public function index(Request $request)
+
+    public function index()
     {
-        // Add default filters for Date
-        $startDateFilter = $request->input('start_date', Carbon::today()->toDateString());
-        $endDateFilter = $request->input('end_date', Carbon::today()->toDateString());
-
-        $classQuery = ClassSchedule::with('category')
-            ->whereDate('start_date', '<=', $endDateFilter)
-            ->whereDate('end_date', '>=', $startDateFilter)
-            ->orderBy('start_date', 'desc');
-
         if (auth()->user()->hasRole("Instructor")) {
             $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
             $instructorId = (string) $instructor->id;
-            $classes = $classQuery->get();
+            $att = ClassSchedule::with('category')->get();
 
             // Filter the collection
-            $filteredSchedules = $classes->filter(function ($schedule) use ($instructorId) {
+            $filteredSchedules = $att->filter(function ($schedule) use ($instructorId) {
                 return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
             });
 
-            // 1. Collect all necessary IDs from the filtered schedules
+            // 1. Collect all necessary IDs from the filtered schedules to avoid querying inside the loop
             $allInstructorIds = $filteredSchedules->pluck('instructor_ids')->flatten()->unique()->toArray();
             $allScheduleIds = $filteredSchedules->pluck('id')->toArray();
 
@@ -182,7 +175,7 @@ class AttendanceController extends Controller
             // Reassign $att to the filtered results so the view iteration works properly
             $att = $filteredSchedules;
         } else {
-            $att = $classQuery->get();
+            $att = ClassSchedule::with('category')->latest()->get();
 
             // 1. Collect all necessary IDs to avoid querying inside the loop
             $allInstructorIds = $att->pluck('instructor_ids')->flatten()->unique()->toArray();
@@ -219,6 +212,7 @@ class AttendanceController extends Controller
         return view('backends.attendance.attendance', compact('att', 'record'));
     }
 
+    // ၂။ အသစ်ထည့်မယ့် အခန်း
     public function inTime(Request $request)
     {
         $request->validate([
@@ -231,10 +225,7 @@ class AttendanceController extends Controller
         $instructorId = $request->instructor_id;
         $attendanceDate = $request->attendance_date;
 
-        $isAdmin = auth()->user()->hasRole("Admin");
-
         // 1. Record or update the instructor's own attendance marker
-        // Admin မှ checkin လုပ်ပေးပါက အလိုအလျောက် approve ဖြစ်စေရန် admin_approve ကိုပါ ထည့်သွင်းထားပါသည်။
         Attendance::updateOrCreate(
             [
                 'class_id' => $classId,
@@ -244,7 +235,6 @@ class AttendanceController extends Controller
             ],
             [
                 'attended' => true,
-                'admin_approve' => $isAdmin ? true : false,
             ]
         );
 
@@ -267,32 +257,31 @@ class AttendanceController extends Controller
                     ->where('selected_class_id', $classId)
                     ->where('status', 'confirmed')
                     ->first();
-                
-                // Ensure $booking and package exists
-                if($booking && $booking->package) {
-                    $calculatedFee = ($booking->package->price * $feePercentage) / 100;
+                $calculatedFee = ($booking->package->price * $feePercentage) / 100;
 
-                    Attendance::updateOrCreate(
-                        [
-                            'class_id' => $classId,
-                            'attendance_date' => $attendanceDate,
-                            'client_id' => $studentAtt->client_id,
-                            'instructor_id' => $instructorId,
-                        ],
-                        [
-                            'attended' => true,
-                            'fee_amount' => $calculatedFee,
-                            'admin_approve' => true,
-                            'is_paid' => false,
-                        ]
-                    );
-                }
+                Attendance::updateOrCreate(
+                    [
+                        'class_id' => $classId,
+                        'attendance_date' => $attendanceDate,
+                        'client_id' => $studentAtt->client_id,
+                        'instructor_id' => $instructorId,
+                    ],
+                    [
+                        'attended' => true,
+                        'fee_amount' => $calculatedFee,
+                        'admin_approve' => true,
+                        'is_paid' => false,
+                    ]
+                );
             }
         }
 
         return back()->with('success', 'Instructor attendance recorded and retroactive fees applied!');
     }
 
+    /**
+     * Record Student Attendance (Checks if at least one instructor has checked in)
+     */
     public function ClientinTime(Request $request)
     {
         $request->validate([
@@ -300,6 +289,7 @@ class AttendanceController extends Controller
             'client_ids' => 'required|array',
             'attendance_date' => 'required',
         ]);
+
 
         $classId = $request->class_id;
         $attendanceDate = $request->attendance_date;
@@ -312,10 +302,9 @@ class AttendanceController extends Controller
                 ->whereNull('client_id')
                 ->get();
             if ($inst->isEmpty()) {
-                return back()->with('error', 'You have not checked in for this class yet. Or Waiting For Admin Approved! Student attendance cannot be recorded.');
+                return back()->with('error', 'You have not checked in for this class yet. Or Wainting For Admin Approved! Student attendance cannot be recorded.');
             }
         }
-        
         // 1. CRITICAL CHECK: Verify if AT LEAST ONE teacher has checked in for this class today
         $checkedInTeachers = Attendance::where('class_id', $classId)
             ->where('attendance_date', $attendanceDate)
@@ -325,45 +314,87 @@ class AttendanceController extends Controller
             ->get();
 
         if ($checkedInTeachers->isEmpty()) {
-            return back()->with('error', 'No instructors have checked in for this class yet. Or Waiting For Admin Approved! Student attendance cannot be recorded.');
+            return back()->with('error', 'No instructors have checked in for this class yet. Or Wainting For Admin Approved! Student attendance cannot be recorded.');
         }
 
         foreach ($request->client_ids as $clientId) {
             // 2. Get the student's active package price and ensure they have classes remaining
+
             $booking = Booking::with('package')
                 ->where('registered_id', $clientId)
                 ->where('selected_class_id', $classId)
                 ->where('status', 'confirmed')
                 ->first();
 
-            if($booking && $booking->package) {
-                // 3. Loop through every instructor who has already checked in and record attendance + fee
-                foreach ($checkedInTeachers as $teacherAtt) {
-                    $teacherId = $teacherAtt->instructor_id;
+            // 3. Loop through every instructor who has already checked in and record attendance + fee
+            foreach ($checkedInTeachers as $teacherAtt) {
+                $teacherId = $teacherAtt->instructor_id;
 
-                    $classInstructor = Instructor::where('id', $teacherId)->first();
+                $classInstructor = Instructor::where('id', $teacherId)->first();
 
-                    $feePercentage = $classInstructor->fee ?? 0;
-                    $calculatedFee = ($booking->package->price * $feePercentage) / 100;
+                $feePercentage = $classInstructor->fee ?? 0;
+                $calculatedFee = ($booking->package->price * $feePercentage) / 100;
 
-                    Attendance::updateOrCreate(
-                        [
-                            'class_id' => $classId,
-                            'attendance_date' => $attendanceDate,
-                            'client_id' => $clientId,
-                            'instructor_id' => $teacherId,
-                        ],
-                        [
-                            'attended' => true,
-                            'fee_amount' => $calculatedFee,
-                            'is_paid' => false,
-                        ]
-                    );
-                }
+                Attendance::updateOrCreate(
+                    [
+                        'class_id' => $classId,
+                        'attendance_date' => $attendanceDate,
+                        'client_id' => $clientId,
+                        'instructor_id' => $teacherId,
+                    ],
+                    [
+                        'attended' => true,
+                        'fee_amount' => $calculatedFee,
+                        'is_paid' => false,
+                    ]
+                );
             }
         }
 
         return back()->with('success', 'Client Attendance recorded and instructor fees applied!');
+    }
+
+    public function attendanceStats()
+    {
+        $totalSessions = Attendance::where('client_id', auth()->user()->id)
+            ->where('attended', true)
+            ->count();
+        $monthlyHistory = [];
+        $maxCount = 1; // Prevents division by zero for relative progress bars
+
+        for ($i = 0; $i < 12; $i++) {
+            $monthDate = Carbon::now()->subMonths($i);
+
+            $count = Attendance::where('client_id', auth()->user()->id)
+                ->where('attended', true)
+                ->whereYear('date', $monthDate->year)
+                ->whereMonth('date', $monthDate->month)
+                ->count();
+
+            if ($count > $maxCount) {
+                $maxCount = $count;
+            }
+
+            $monthlyHistory[] = [
+                'month' => $monthDate->format('M'),
+                'count' => $count,
+            ];
+        }
+
+        foreach ($monthlyHistory as &$item) {
+            $item['percentage'] = $maxCount > 0 ? round(($item['count'] / $maxCount) * 100) : 0;
+        }
+
+        $recentSessions = Attendance::where('attended', true)->where('client_id', auth()->user()->id)
+            ->where('date', '>=', Carbon::now()->subDays(30))->count();
+
+        $stats = [
+            'recentSessions' => $recentSessions,
+            'monthlyHistory' => $monthlyHistory,
+            'totalSessions' => $totalSessions,
+        ];
+
+        return response()->json($stats);
     }
 
     public function adminApprove(Request $request, $instructorId)
@@ -386,6 +417,8 @@ class AttendanceController extends Controller
         // Update the admin_approve field to true
         $attendance->admin_approve = true;
         $attendance->save();
+
+        ClassSchedule::where('id', $request->class_id)->update(['status' => 'completed']);
 
         return back()->with('success', 'Instructor attendance approved by admin.');
     }

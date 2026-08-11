@@ -141,6 +141,28 @@
             transition: background 0.15s ease;
             white-space: nowrap;
         }
+
+        .btn-soma-secondary {
+                background-color: var(--soma-taupe);
+                color: var(--text-light);
+                border: none;
+        }
+
+        .btn-soma-secondary:hover {
+                background-color: var(--text-dark);
+                color: var(--text-light);
+        }
+
+           .btn-soma-teaching {
+                background-color: #897af7;
+                color: var(--text-light);
+                border: none;
+            }
+
+            .btn-soma-teaching:hover {
+                background-color: #7a6ae0;
+                color: var(--text-light);
+            }
         .btn-action-primary { background: #BE9676; color: #ffffff; }
         .btn-action-primary:hover { background: #a67c5c; }
         .btn-action-wait { background: #d1c8b9; color: #334155; }
@@ -301,26 +323,47 @@
                         <tbody>
                             @forelse($classes as $index => $class)
                                 @php
-                                    // Original Logic Preserved
                                     $startTime = \Carbon\Carbon::parse($class->start_time);
                                     $endTime = \Carbon\Carbon::parse($class->end_time);
                                     $duration = $startTime->diffInMinutes($endTime);
-
-                                    $days = is_string($class->days) ? json_decode($class->days, true) : ($class->days ?? []);
-                                    
-                                    $totalCapacity = $class->capacity;
+                                    // Occupancy Logic
+                                    $totalCapacity = $class->capacity ?? 0;
                                     $bookedSlots = $bookingsAll->where('selected_class_id', $class->id)->where('status', 'confirmed')->count();
-                                    if($bookedSlots > $totalCapacity){
+                                    if ($bookedSlots > $totalCapacity) {
                                         $bookedSlots = $totalCapacity;
                                     }
                                     $remainingSlots = max(0, $totalCapacity - $bookedSlots);
 
-                                    $cancelledBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'cancelled')->first();
+                                    // Days Array Parse
+                                    $days = is_string($class->days) ? json_decode($class->days, true) : ($class->days ?? []);
+
+                                    // Instructor Check-in & Over logic
+                                    $todayDate = \Carbon\Carbon::now()->format('Y-m-d');
+                                    $now = \Carbon\Carbon::now();
+                                    $instructorUserIds = $class->instructor_ids ?? [];
+                                    $classEndTime = \Carbon\Carbon::parse($todayDate . ' ' . ($class->end_time ?? $class->time_to ?? '23:59:59'));
+                                    $isClassOver = $now->greaterThan($classEndTime);
+
+                                    $isInstructorCheckedInToday = false;
+                                    if (!$isClassOver) {
+                                        $isInstructorCheckedInToday = \App\Models\Attendance::where('class_id', $class->id)
+                                            ->whereIn('instructor_id', $instructorUserIds)
+                                            ->whereDate('attendance_date', $todayDate)
+                                            ->where('attended', 1)
+                                            ->exists();
+                                    }
+
+                                    // Booking states
                                     $confirmedBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'confirmed')->first();
+                                    $cancelledBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'cancelled')->first();
                                     $hasAnyBooking = $bookings->where('selected_class_id', $class->id)->whereIn('status', ['confirmed', 'waitlisted'])->first();
-                                    
+
+                                    // Cancellation Window
                                     $classStart = \Carbon\Carbon::parse($class->start_date . ' ' . $class->start_time);
                                     $canCancel = now()->diffInHours($classStart, false) >= 48;
+
+                                    // Duration Calculation
+                                    $duration = \Carbon\Carbon::parse($class->start_time)->diffInMinutes(\Carbon\Carbon::parse($class->end_time));
                                 @endphp
                                 <tr>
                                     <td class="text-muted">{{ $loop->iteration }}</td>
@@ -339,7 +382,7 @@
                                         <div class="badge-status-active-text">{{ $class->category->name }}</div>
                                         
                                         <!-- Status Badge Logic from Original Card -->
-                                        @if ($class->status == 'ongoing')
+                                        @if ($class->status == 'book')
                                             @auth
                                                 @if($confirmedBooking)
                                                     <span class="status-pill pill-approved">Joined</span>
@@ -395,21 +438,27 @@
                                                 Details
                                             </button>
                                             
-                                            @auth
-                                                @if(!$confirmedBooking && $class->status == 'ongoing' && !$cancelledBooking)
-                                                    @if($remainingSlots > 0)
-                                                        <button onClick="joinClass({{ $class->id }})" class="btn-action-primary w-100">
-                                                            Join
-                                                        </button>
-                                                    @elseif(!$hasAnyBooking)
-                                                        <button onClick="joinClass({{ $class->id }})" class="btn-action-wait w-100">
-                                                            WaitList
-                                                        </button>
+                                              @auth
+                                                @if(!$confirmedBooking && $class->status == 'book' && !$cancelledBooking)
+                                                    @if($isInstructorCheckedInToday && !$isClassOver)
+                                                        <span class="btn btn-soma-teaching btn-sm rounded-3 px-3 py-1 w-100">Teaching...</span>
+                                                    @else
+                                                        @if($remainingSlots > 0)
+                                                            <button onClick="joinClass({{ $class->id }})" class="btn btn-soma-primary btn-sm rounded-3 px-3 py-1 w-100">
+                                                                Join
+                                                            </button>
+                                                        @elseif(!$hasAnyBooking)
+                                                            <button onClick="joinClass({{ $class->id }})" class="btn btn-soma-secondary btn-sm  w-100 rounded-3 px-3 py-1">
+                                                                WaitList
+                                                            </button>
+                                                        @endif
                                                     @endif
-                                                @elseif($confirmedBooking && $class->status == 'ongoing' && $canCancel)
-                                                    <button onClick="cancelClass({{ $confirmedBooking->id }})" class="btn-action-cancel w-100">
+                                                @elseif($confirmedBooking && $class->status == 'book' && $canCancel)
+                                                    <button onClick="cancelClass({{ $confirmedBooking->id }})" class="btn btn-soma-danger btn-sm rounded-3 px-3 py-1 w-100">
                                                         Cancel
                                                     </button>
+                                                @elseif($isInstructorCheckedInToday && !$isClassOver)
+                                                    <span class="btn btn-soma-teaching btn-sm rounded-3 px-3 py-1 w-100">Teaching...</span>
                                                 @endif
                                             @endauth
                                         </div>
