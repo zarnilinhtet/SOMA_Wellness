@@ -6,6 +6,7 @@ use App\Models\Package;
 use App\Models\Purchase;
 use App\Models\User;
 use App\Models\UserPackageDiscount;
+use App\Models\ClassSchedule; // ClassSchedule Model ကို Use လုပ်ထားပါသည်
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -159,7 +160,10 @@ class UserController extends Controller
         $userTypes = \Spatie\Permission\Models\Role::all();
         $allPackages = \App\Models\Package::all();
 
-        return view('user.user_with_packages', compact('users', 'userTypes', 'allPackages'));
+        // Class Schedule များကို ယူခြင်း
+        $allClasses = ClassSchedule::orderBy('start_date', 'desc')->get();
+
+        return view('user.user_with_packages', compact('users', 'userTypes', 'allPackages', 'allClasses'));
     }
 
     public function userPackageDetails($id)

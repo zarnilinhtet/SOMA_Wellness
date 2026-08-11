@@ -59,8 +59,8 @@
                 
                 <div class="row g-2 align-items-end">
                     <!-- Package Data Dropdown Filter -->
-                    <div class="col-md-5">
-                        <label class="fw-bold text-muted small mb-1">Search by Package (Name / Category / Date Time)</label>
+                    {{-- <div class="col-md-4">
+                        <label class="fw-bold text-muted small mb-1">Search by Package</label>
                         <select id="packageSearchFilter" class="form-select select2-packages shadow-sm">
                             <option value="">All Packages</option>
                             @foreach($allPackages as $pkg)
@@ -69,10 +69,28 @@
                                 </option>
                             @endforeach
                         </select>
-                    </div>
+                    </div> --}}
+
+                    <!-- Class Search Dropdown Filter -->
+                    {{-- <div class="col-md-4">
+                        <label class="fw-bold text-muted small mb-1">Search by Class (Name / Date / Time)</label>
+                        <select id="classSearchFilter" class="form-select select2-classes shadow-sm">
+                            <option value="">All Classes</option>
+                            @if(isset($allClasses))
+                                @foreach($allClasses as $class)
+                                    <option value="{{ $class->class_name }}">
+                                        {{ $class->class_name }} / 
+                                        {{ \Carbon\Carbon::parse($class->start_date)->format('d M Y') }} / 
+                                        {{ \Carbon\Carbon::parse($class->start_time)->format('h:i A') }} - 
+                                        {{ \Carbon\Carbon::parse($class->end_time)->format('h:i A') }}
+                                    </option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div> --}}
 
                     <!-- Status Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="fw-bold text-muted small mb-1">Package Status</label>
                         <select id="packageStatusFilter" class="form-select shadow-sm" style="height: 38px; border-radius: 6px;">
                             <option value="">All Status</option>
@@ -94,6 +112,8 @@
                                 <th>Phone</th>
                                 <th>Role</th>
                                 <th>Purchased Package(s)</th>
+                                <!-- Hidden Column for Class Filter (အကယ်၍ Class အချက်အလက်များကို Table ထဲထည့်ပြချင်လျှင်သုံးရန်) -->
+                                <th class="d-none">Classes</th>
                                 <th>Package Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -148,6 +168,11 @@
                                         @endif
                                     </td>
 
+                                    <!-- Classes (Hidden Search Column) -->
+                                    <td class="d-none">
+                                        <!-- Class နဲ့ သက်ဆိုင်တဲ့ Data တွေကို ဒီနေရာမှာ ထည့်ပါ (Database Structure ပေါ်မူတည်၍) -->
+                                    </td>
+
                                     <!-- Package Status Column -->
                                     <td>
                                         @if($user->package_status == 'Using Package')
@@ -191,7 +216,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">
+                                    <td colspan="8" class="text-center py-4 text-muted">
                                         <i class="fas fa-box-open fs-3 mb-2 d-block"></i> Package ဝယ်ယူထားသော User မရှိသေးပါ။
                                     </td>
                                 </tr>
@@ -205,6 +230,7 @@
 </div>
 
 {{-- MODAL 1: Purchased Packages List --}}
+<!-- ... (Modal 1 unchanged) ... -->
 <div class="modal fade" id="packagesListModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content border-0 shadow">
@@ -239,6 +265,7 @@
 </div>
 
 {{-- MODAL 2: Class Attendance History & Count Number --}}
+<!-- ... (Modal 2 unchanged) ... -->
 <div class="modal fade" id="attendanceHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow">
@@ -311,26 +338,38 @@
             allowClear: true
         });
 
+        // Init Select2 for Class Search Dropdown
+        $('.select2-classes').select2({
+            placeholder: "Search class...",
+            width: '100%',
+            allowClear: true
+        });
+
         // Init DataTables
         let table = $('#basic-datatables').DataTable({
             "pageLength": 10,
             "columnDefs": [
-                { "targets": [6], "orderable": false } // Action column 
+                { "targets": [7], "orderable": false } // Action column index အသစ်ပြောင်းပေးထားသည်
             ],
             "language": {
                 "search": "Search Client Name:" 
             }
         });
 
-        // DataTables Filters (Column 4 = Package Name(Hidden), Column 5 = Status)
+        // DataTables Filters (Column 4 = Package Name, Column 5 = Classes(Hidden), Column 6 = Status)
         $('#packageSearchFilter').on('change', function() {
             let pkgName = $(this).val();
             table.column(4).search(pkgName).draw(); 
         });
 
+        $('#classSearchFilter').on('change', function() {
+            let className = $(this).val();
+            table.column(5).search(className).draw(); // Class column index သည် 5 ဖြစ်ပါသည်
+        });
+
         $('#packageStatusFilter').on('change', function() {
             let status = $(this).val();
-            table.column(5).search(status).draw(); 
+            table.column(6).search(status).draw(); // Status column index သည် 6 ဖြစ်ပါသည်
         });
 
         // --------------------------------------------------------

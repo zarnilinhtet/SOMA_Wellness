@@ -47,13 +47,13 @@
                                 </div>
 
                                 <div class="col-md-6 form-group mb-3">
-                                    <label class="fw-bold">New Password</label>
-                                    <input type="password" class="form-control" name="password" placeholder="Leave blank to keep current">
+                                    <label class="fw-bold">New Password </label>
+                                    <input type="password" class="form-control" name="password" placeholder="Password must be 8 or more characters">
                                 </div>
 
                                 <div class="col-md-6 form-group mb-3">
                                     <label class="fw-bold">Confirm New Password</label>
-                                    <input type="password" class="form-control" name="password_confirmation" placeholder="Leave blank to keep current">
+                                    <input type="password" class="form-control" name="password_confirmation" placeholder="Password must be 8 or more characters">
                                 </div>
                             </div>
                         </div>
