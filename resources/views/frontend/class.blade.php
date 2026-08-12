@@ -153,6 +153,17 @@
                 color: var(--text-light);
         }
 
+        .btn-soma-primary {
+                background-color: var(--soma-taupe);
+                color: var(--text-light);
+                border: none;
+        }
+
+        .btn-soma-primary:hover {
+                background-color: var(--text-dark);
+                color: var(--text-light);
+        }
+
            .btn-soma-teaching {
                 background-color: #897af7;
                 color: var(--text-light);

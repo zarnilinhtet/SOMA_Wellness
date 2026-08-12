@@ -72,6 +72,12 @@
         border: 1px solid #bae6fd;
     }
 
+    .role-receptionist {
+        background-color: #fef3c7;
+        color: #f59e0b;
+        border: 1px solid #fde68a;
+    }
+
     .role-customer {
         background-color: #dcfce7;
         color: #22c55e;
@@ -143,11 +149,13 @@
                         <option value="Admin">Admin</option>
                         <option value="Instructor">Instructor</option>
                         <option value="Customer">Customer</option>
+                        <option value="Receptionist">Receptionist</option>
                     </select>
 
                     <!-- Export Dropdown Menu -->
                     <div class="dropdown">
-                        <button class="btn btn-success btn-md shadow-sm dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-success btn-md shadow-sm dropdown-toggle" type="button"
+                            id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-download me-1"></i> Export
                         </button>
                         <ul class="dropdown-menu border-0 shadow" aria-labelledby="exportDropdown">
@@ -209,7 +217,9 @@
                                             <span class="badge-custom role-admin">Admin</span>
                                         @elseif($user->role === 'Instructor' || $user->hasRole('Instructor'))
                                             <span class="badge-custom role-instructor">Instructor</span>
-                                        @else
+                                        @elseif($user->role === 'Receptionist' || $user->hasRole('Receptionist'))
+                                            <span class="badge-custom role-receptionist">Receptionist</span>
+                                        @elseif($user->role === 'Customer' || $user->hasRole('Customer'))
                                             <span class="badge-custom role-customer">Customer</span>
                                         @endif
                                     </td>
@@ -252,53 +262,55 @@
 
                                     @if (auth()->user()->hasPermission('user_edit') || auth()->user()->hasPermission('user_delete'))
                                         <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-2 align-items-center">
-                                                @if (auth()->user()->hasPermission('user_edit'))
-                                                    <a href="{{ route('user_register.edit', $user->id) }}"
-                                                        class="btn btn-link btn-primary p-0" title="Edit User">
-                                                        <i class="fa fa-edit fs-5"></i>
-                                                    </a>
-                                                @endif
+                                            @if(auth()->id() !== $user->id && !$user->hasRole('Admin'))
+                                                <div class="d-flex justify-content-center gap-2 align-items-center">
 
-                                                @if (auth()->user()->hasPermission('user_delete'))
-                                                    @if ($user->email !== 'admin@admin.com')
-                                                        <form action="{{ route('user_register.destroy', $user->id) }}" method="POST"
-                                                            class="m-0">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-link btn-danger p-0"
-                                                                onclick="return confirm('Are you sure you want to delete this user?')">
-                                                                <i class="fa fa-times fs-4"></i>
-                                                            </button>
-                                                        </form>
-                                                    @else
-                                                        <i class="fa fa-lock text-muted fs-5" title="System Protected"></i>
+                                                    @if(auth()->user()->hasPermission('user_edit'))
+                                                        <a href="{{ route('user_register.edit', $user->id) }}"
+                                                            class="btn btn-link btn-primary p-0" title="Edit User">
+                                                            <i class="fa fa-edit fs-5"></i>
+                                                        </a>
                                                     @endif
-                                                @endif
 
-                                                @if(!$user->hasRole('Admin'))
+                                                    @if(auth()->user()->hasPermission('user_delete'))
+                                                        @if ($user->email !== 'admin@admin.com')
+                                                            <form action="{{ route('user_register.destroy', $user->id) }}" method="POST"
+                                                                class="m-0">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-link btn-danger p-0"
+                                                                    onclick="return confirm('Are you sure you want to delete this user?')">
+                                                                    <i class="fa fa-times fs-4"></i>
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <i class="fa fa-lock text-muted fs-5" title="System Protected"></i>
+                                                        @endif
+                                                    @endif
+
                                                     <button type="button" class="btn btn-link btn-primary p-0"
                                                         title="User Onboarding Info" data-bs-toggle="modal"
                                                         data-bs-target="#userInfo" data-bs-user-id="{{ $user->id }}">
                                                         <i class="fa fa-eye fs-5"></i>
                                                     </button>
 
-                                                    @if (auth()->user()->hasPermission('user_register'))
-                                                        <button type="button" class="btn btn-success btn-sm btn-open-discount shadow-sm"
-                                                            onclick="window.location.href='/give/discount/{{ $user->id }}'">
-                                                            Discount
-                                                        </button>
-                                                        <button type="button" class="btn btn-primary btn-sm shadow-sm"
-                                                            onclick="window.location.href='/buy/package/{{ $user->id }}'">
-                                                            Buy Pkg
-                                                        </button>
-                                                        <button type="button" class="btn btn-info btn-sm"
-                                                            onclick="window.location.href='/join/class/for/user/{{ $user->id }}'">
-                                                            Join Class
-                                                        </button>
-                                                    @endif
-                                                @endif
-                                            </div>
+                                                    <button type="button" class="btn btn-success btn-sm shadow-sm"
+                                                        onclick="window.location.href='/give/discount/{{ $user->id }}'">
+                                                        Discount
+                                                    </button>
+
+                                                    <button type="button" class="btn btn-primary btn-sm shadow-sm"
+                                                        onclick="window.location.href='/buy/package/{{ $user->id }}'">
+                                                        Buy Pkg
+                                                    </button>
+
+                                                    <button type="button" class="btn btn-info btn-sm shadow-sm"
+                                                        onclick="window.location.href='/join/class/for/user/{{ $user->id }}'">
+                                                        Join Class
+                                                    </button>
+
+                                                </div>
+                                            @endif
                                         </td>
                                     @endif
                                 </tr>
@@ -320,7 +332,8 @@
         <form action="{{ route('admin.booking.store') }}" method="POST" class="modal-content border-0 shadow-lg">
             @csrf
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold">Book Class for <span id="bookingUserName" class="text-primary"></span></h5>
+                <h5 class="modal-title fw-bold">Book Class for <span id="bookingUserName" class="text-primary"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -343,7 +356,8 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary px-4"><i class="fas fa-calendar-check me-1"></i> Book Now</button>
+                <button type="submit" class="btn btn-primary px-4"><i class="fas fa-calendar-check me-1"></i> Book
+                    Now</button>
             </div>
         </form>
     </div>
@@ -379,12 +393,14 @@
                             @error('age') <span style="color: red;">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="fw-bold">Password <br> <span class="text-danger">* Password Must be at least 8 characters *</span></label>
+                            <label class="fw-bold">Password <br> <span class="text-danger">* Password Must be at least 8
+                                    characters *</span></label>
                             <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                             @error('password') <span style="color: red;">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="fw-bold">Confirm Password <br> <span class="text-danger">* Password Must be at least 8 characters *</span></label>
+                            <label class="fw-bold">Confirm Password <br> <span class="text-danger">* Password Must be at
+                                    least 8 characters *</span></label>
                             <input type="password" name="password_confirmation" class="form-control" placeholder="••••••••"
                                 required>
                         </div>
@@ -509,7 +525,7 @@
 <script>
     $(document).ready(function () {
         const users = @json($users);
-        
+
         var table = $('#basic-datatables').DataTable({
             "pageLength": 10,
             "info": true,

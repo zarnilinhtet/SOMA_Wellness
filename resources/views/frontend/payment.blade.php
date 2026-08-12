@@ -371,6 +371,30 @@
                 border-bottom: 1px solid rgba(110, 92, 82, 0.1);
             }
         }
+
+        .btn-accept {
+            background: var(--beige);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 24px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-accept:hover {
+            background: #a87e5c;
+            color: white;
+        }
+
+        .btn-decline {
+            background: #e5e5e5;
+            color: #666;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 24px;
+            font-weight: 600;
+        }
     </style>
 
     <div class="payment-wrapper">
@@ -400,13 +424,13 @@
                     <div class="gateway-list" id="gatewayContainer">
                         {{-- 1. Manual Static Cash Option --}}
                         <div class="compact-method-row active" data-name="Cash Payment" onclick='selectMethodItem(
-                                            this,
-                                            "Cash Payment",
-                                            "Over-the-Counter / Office Desk",
-                                            "Pay In-Person with Cash",
-                                            "fa-solid fa-money-bill-wave",
-                                            ""
-                                        )'>
+                                                    this,
+                                                    "Cash Payment",
+                                                    "Over-the-Counter / Office Desk",
+                                                    "Pay In-Person with Cash",
+                                                    "fa-solid fa-money-bill-wave",
+                                                    ""
+                                                )'>
                             <div class="d-flex align-items-center gap-3">
                                 <div class="row-icon-box">
                                     <i class="fa-solid fa-money-bill-wave"></i>
@@ -421,13 +445,13 @@
                         {{-- 2. Dynamic Database Payments --}}
                         @foreach ($payments as $payment)
                             <div class="compact-method-row" data-name="{{ $payment->method }}" onclick='selectMethodItem(
-                                                                this,
-                                                                "{{ addslashes($payment->method) }}",
-                                                                "{{ addslashes($payment->name) }}",
-                                                                "{{ addslashes($payment->account_info) }}",
-                                                                "fa-solid fa-wallet",
-                                                                "{{ asset($payment->image) }}"
-                                                            )'>
+                                                                                this,
+                                                                                "{{ addslashes($payment->method) }}",
+                                                                                "{{ addslashes($payment->name) }}",
+                                                                                "{{ addslashes($payment->account_info) }}",
+                                                                                "fa-solid fa-wallet",
+                                                                                "{{ asset($payment->image) }}"
+                                                                            )'>
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="row-icon-box">
                                         <i class="fa-solid fa-wallet"></i>
@@ -517,8 +541,7 @@
                                     </label>
                                     <input type="text" id="formName" name="sender_name" required
                                         class="form-control premium-input @error('sender_name') is-invalid @enderror"
-                                        placeholder="Account holder name"
-                                       >
+                                        placeholder="Account holder name">
                                     @error('sender_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -531,8 +554,7 @@
                                     </label>
                                     <input type="text" id="formPhone" name="sender_phone" required
                                         class="form-control premium-input @error('sender_phone') is-invalid @enderror"
-                                        placeholder="09xxxxxxxx"
-                                        >
+                                        placeholder="09xxxxxxxx">
                                     @error('sender_phone')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -546,7 +568,7 @@
                                     </label>
                                     <input type="text" id="receiver_name_input" name="receiver_name"
                                         class="form-control premium-input @error('receiver_name') is-invalid @enderror"
-                                        placeholder="Receiver Name" >
+                                        placeholder="Receiver Name">
                                     @error('receiver_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -734,14 +756,30 @@
         aria-labelledby="paymentPolicyModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content policy-modal-content">
-                <div class="policy-modal-header border-bottom">
+                <div class="policy-modal-header p-3 border-bottom">
                     <h5 class="modal-title fw-bold" id="paymentPolicyModalLabel" style="color: var(--dark);">
                         <i class="fa-solid fa-shield-halved text-warning me-2"></i> Payment Terms & Conditions
                     </h5>
                 </div>
-                <div class="policy-modal-body">
-                    <p class="fw-bold text-dark mb-3">Please carefully read our standard processing policy before completing
-                        your purchase:</p>
+                <div class="policy-modal-body p-3">
+                    <p class="fw-bold text-dark">Please carefully read our standard processing policy before completing your
+                        purchase:</p>
+                    <ul>
+                        <li>All payment requests are processed manually within 10 to 30 minutes under regular processing
+                            hours.</li>
+                        <li>You must provide a clear and authentic receipt voucher image/screenshot displaying the
+                            corresponding global Transaction Reference Identifier Code.</li>
+                        <li>Falsified proof or multiple entries mapping a single voucher instance code will trigger
+                            immediate automated system account terminal validation locks.</li>
+                        <li>Refunds are not permitted once process verification pipeline statuses settle into completed
+                            execution branches.</li>
+                    </ul>
+                </div>
+                <div class="policy-modal-footer p-3 border-top d-flex gap-2">
+                    <button type="button" class="btn btn-decline w-50" data-bs-dismiss="modal"
+                        onclick="handlePolicyDecline()">Decline</button>
+                    <button type="button" class="btn btn-accept w-50" data-bs-dismiss="modal"
+                        onclick="handlePolicyAccept()">Accept Terms</button>
                 </div>
             </div>
         </div>

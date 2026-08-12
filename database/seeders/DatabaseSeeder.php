@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
         ]);
         $admin->assignRole('Admin');
 
+        $this->call([
+            PermissionSeeder::class,
+        ]);
 
 
         // လိုအပ်ရင် တခြား test users ၉ ယောက် ထပ်တိုးချင်ရင် ဒီ line ကို uncomment လုပ်နိုင်ပါတယ်

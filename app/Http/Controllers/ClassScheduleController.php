@@ -20,6 +20,7 @@ class ClassScheduleController extends Controller
     public function index()
     {
         if (auth()->user()->hasRole("Instructor")) {
+
             $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
             $instructorId = (string) $instructor->id;
             $schedules = ClassSchedule::with('category')->get();

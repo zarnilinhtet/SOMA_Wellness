@@ -27,18 +27,56 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+
         $request->session()->regenerate();
 
-        if (Auth::user()->hasRole('Admin') || Auth::user()->hasRole('Instructor') || Auth::user()->hasRole('Receptionist')) {
+        $user = Auth::user();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin / Instructor / Receptionist
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $user->hasAnyRole([
+                'Admin',
+                'Instructor',
+                'Receptionist'
+            ])
+        ) {
+
             return redirect()->route('dashboard');
-        } else if (Auth::user()->hasRole('Customer')) {
-            // Direct redirect (No 'intended')
-            $onBoard = Onboarding::where('user_id', Auth::user()->id)->first();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Customer
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->hasRole('Customer')) {
+
+            $onBoard = Onboarding::where(
+                'user_id',
+                $user->id
+            )->first();
+
             if (!$onBoard) {
                 return redirect()->route('onboarding.index');
             }
+
             return redirect()->route('home.page');
         }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fallback
+        |--------------------------------------------------------------------------
+        */
 
         return redirect('/');
     }
