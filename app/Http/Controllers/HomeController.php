@@ -42,11 +42,11 @@ class HomeController extends Controller
         // 2. Fetch classes valid for today
         $classes = ClassSchedule::with('category')
             ->where('status', 'book')
-            // Check if today is within start_date and end_date
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today)
+            // // Check if today is within start_date and end_date
+            // ->whereDate('start_date', '<=', $today)
+            // ->whereDate('end_date', '>=', $today)
             // Check if today matches scheduled days (JSON array)
-            ->whereJsonContains('days', $todayDay)
+            // ->whereJsonContains('days', $todayDay)
             // Filter category if needed
             ->whereHas('category', function ($query) {
                 $query->where('name', 'Yoga');

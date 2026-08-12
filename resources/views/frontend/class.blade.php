@@ -153,6 +153,17 @@
                 color: var(--text-light);
         }
 
+        .btn-soma-danger {
+                background-color: #f87171;
+                color: var(--text-light);
+                border: none;
+        }
+
+        .btn-soma-danger:hover {
+                background-color: #ef4444;
+                color: var(--text-light);
+        }
+
         .btn-soma-primary {
                 background-color: var(--soma-taupe);
                 color: var(--text-light);
