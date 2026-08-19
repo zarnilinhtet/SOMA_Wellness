@@ -7,12 +7,31 @@
     <title>Soma Yoga | Personalize Your Journey</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    
+    <!-- Added Google Fonts for Fahkwang (Replacing Poppins) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     @include('layouts.onboard_style')
 
     <style>
+        /* --- Brand Variables & Font Overrides --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+            
+            /* Aliases for existing specific variables */
+            --yoga-primary: var(--soma-primary);
+            --yoga-text: var(--soma-secondary);
+            --soma-dark: var(--soma-secondary);
+        }
+
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
         /* Smooth styling for disabled cards and custom input fields */
         .option-card.disabled-card {
             opacity: 0.5;
@@ -32,13 +51,12 @@
             padding: 12px 20px;
             border: 1px solid #ccc;
             border-radius: 8px;
-            font-family: 'Poppins', sans-serif;
             outline: none;
             transition: border-color 0.2s;
         }
 
         .conInput:focus {
-            border-color: var(--yoga-primary, #c49a72);
+            border-color: var(--soma-primary);
         }
 
         /* Symmetric 2-column grid layout */
@@ -68,7 +86,7 @@
     <div class="step-panel active" id="step-1">
         <div class="split-container">
             <div class="split-sidebar">
-                <div class="lotus-icon">
+                <div class="lotus-icon" style="color: var(--soma-primary);">
                     <svg width="45" height="45" fill="none" stroke="currentColor" stroke-width="1.2"
                         viewBox="0 0 24 24">
                         <path d="M12 22c4.5-5 7-9.5 7-13A7 7 0 0 0 5 9c0 3.5 2.5 8 7 13Z" />
@@ -77,17 +95,17 @@
                     </svg>
                 </div>
 
-                <h1 class="title-huge">
+                <h1 class="title-huge" style="color: var(--soma-secondary);">
                     Welcome to SOMA, {{ auth()->user()->name ?? '' }}!
                 </h1>
 
-                <p style="font-size: 1.2rem; color: var(--yoga-text);">
+                <p style="font-size: 1.2rem; color: var(--soma-secondary);">
                     Let’s find classes that inspire you.
                 </p>
             </div>
 
             <div class="split-content">
-                <h2 class="question-text">Where are you starting your practice today?</h2>
+                <h2 class="question-text" style="color: var(--soma-secondary);">Where are you starting your practice today?</h2>
 
                 <div class="error-msg" id="error-step-1">⚠️ Please make a selection.</div>
                 <div class="subtitle-text">&nbsp;</div>
@@ -114,7 +132,7 @@
                         background: none;
                         border: none;
                         font-size: 0.85rem;
-                        color: var(--yoga-primary);
+                        color: var(--soma-primary);
                         text-decoration: underline;
                         padding: 0;
                         cursor: pointer;
@@ -122,7 +140,7 @@
                         View Terms & Privacy
                     </button>
 
-                    <button class="btn-next" id="nextBtn" onclick="nextStep(2)" disabled>
+                    <button class="btn-next" id="nextBtn" onclick="nextStep(2)" disabled style="background-color: var(--soma-secondary);">
                         Next
                     </button>
                 </div>
@@ -133,13 +151,13 @@
     <!-- STEP 2 -->
     <div class="step-panel" id="step-2">
         <div class="full-container">
-            <button class="btn-back" onclick="prevStep(1)">‹</button>
+            <button class="btn-back" onclick="prevStep(1)" style="color: var(--soma-secondary);">‹</button>
 
-            <h2 class="question-text">
+            <h2 class="question-text" style="color: var(--soma-secondary);">
                 Aside from yoga, what else would you like to include in your practice?
             </h2>
 
-            <p class="subtitle-text">Please select all that apply.</p>
+            <p class="subtitle-text" style="color: var(--soma-secondary); opacity: 0.8;">Please select all that apply.</p>
 
             <div class="error-msg" id="error-step-2">⚠️ Please make a selection.</div>
 
@@ -162,17 +180,17 @@
                         class="option-text">Breathwork</span></div>
             </div>
 
-            <button class="btn-next mt-5" onclick="nextStep(3)">Next</button>
+            <button class="btn-next mt-5" onclick="nextStep(3)" style="background-color: var(--soma-secondary);">Next</button>
         </div>
     </div>
 
     <!-- STEP 3 -->
     <div class="step-panel" id="step-3">
         <div class="full-container-3">
-            <button class="btn-back" onclick="prevStep(2)">‹</button>
+            <button class="btn-back" onclick="prevStep(2)" style="color: var(--soma-secondary);">‹</button>
 
-            <h2 class="question-text">What time of day do you prefer to practice?</h2>
-            <p class="subtitle-text">Please select all that apply.</p>
+            <h2 class="question-text" style="color: var(--soma-secondary);">What time of day do you prefer to practice?</h2>
+            <p class="subtitle-text" style="color: var(--soma-secondary); opacity: 0.8;">Please select all that apply.</p>
 
             <div class="error-msg" id="error-step-3">⚠️ Please make a selection.</div>
 
@@ -185,17 +203,17 @@
                         class="option-text">Evening</span></div>
             </div>
 
-            <button class="btn-next" onclick="nextStep(4)">Next</button>
+            <button class="btn-next" onclick="nextStep(4)" style="background-color: var(--soma-secondary);">Next</button>
         </div>
     </div>
 
     <!-- STEP 4 -->
     <div class="step-panel" id="step-4">
         <div class="full-container">
-            <button class="btn-back" onclick="prevStep(3)">‹</button>
+            <button class="btn-back" onclick="prevStep(3)" style="color: var(--soma-secondary);">‹</button>
 
-            <h2 class="question-text">Any special considerations for your practice?</h2>
-            <p class="subtitle-text">Please select all that apply.</p>
+            <h2 class="question-text" style="color: var(--soma-secondary);">Any special considerations for your practice?</h2>
+            <p class="subtitle-text" style="color: var(--soma-secondary); opacity: 0.8;">Please select all that apply.</p>
 
             <div class="error-msg" id="error-step-4">⚠️ Please make a selection.</div>
 
@@ -227,17 +245,17 @@
                 </div>
             </div>
 
-            <button class="btn-next mt-5" onclick="nextStep(5)">Next</button>
+            <button class="btn-next mt-5" onclick="nextStep(5)" style="background-color: var(--soma-secondary);">Next</button>
         </div>
     </div>
 
     <!-- STEP 5 -->
     <div class="step-panel" id="step-5">
         <div class="full-container">
-            <button class="btn-back" onclick="prevStep(4)">‹</button>
+            <button class="btn-back" onclick="prevStep(4)" style="color: var(--soma-secondary);">‹</button>
 
-            <h2 class="question-text">Where do you know about Soma?</h2>
-            <p class="subtitle-text">Please select One</p>
+            <h2 class="question-text" style="color: var(--soma-secondary);">Where do you know about Soma?</h2>
+            <p class="subtitle-text" style="color: var(--soma-secondary); opacity: 0.8;">Please select One</p>
 
             <div class="error-msg" id="error-step-5">⚠️ Please make a selection.</div>
 
@@ -262,25 +280,25 @@
                 </div>
             </div>
 
-            <button class="btn-next mt-5" onclick="startLoadingStep()">Next</button>
+            <button class="btn-next mt-5" onclick="startLoadingStep()" style="background-color: var(--soma-secondary);">Next</button>
         </div>
     </div>
 
     <!-- STEP 6 (LOADER) -->
     <div class="step-panel" id="step-6">
         <div class="loader-container">
-            <h2 style="font-weight: 400; color: #222;">
+            <h2 style="font-weight: 400; color: var(--soma-secondary);">
                 We are personalizing your<br>Soma experience
             </h2>
 
             <div class="tree-icon">
-                <svg width="60" height="60" fill="none" stroke="#222" stroke-width="1.2" viewBox="0 0 24 24">
+                <svg width="60" height="60" fill="none" stroke="var(--soma-secondary)" stroke-width="1.2" viewBox="0 0 24 24">
                     <path d="M12 2L3 17h18L12 2Z" />
                     <path d="M12 7l-6 10h12L12 7Z" />
                 </svg>
             </div>
 
-            <p style="font-size: 0.9rem; color: #555; letter-spacing: 0.5px;">
+            <p style="font-size: 0.9rem; color: var(--soma-secondary); letter-spacing: 0.5px; opacity: 0.8;">
                 Soma is here to evolve with you day by day
             </p>
         </div>
@@ -290,7 +308,7 @@
     <div class="step-panel" id="step-7" style="background-color: white;">
         <div class="full-container" style="padding-top: 3rem;">
             <div class="mt-5 text-center">
-                <button type="button" class="btn-skip-full" onclick="skipPackageSelection()">
+                <button type="button" class="btn-skip-full" onclick="skipPackageSelection()" style="color: var(--soma-secondary);">
                     Skip for Now
                 </button>
             </div>
@@ -315,42 +333,42 @@
 
                    
             <div class="legal-content p-4">
-                <div class="terms-container" style="background: #FAF8F5; padding: 25px; border-radius: 12px; border: 1px solid rgba(190, 150, 118, 0.2);">
-                    <h5 style="color: var(--soma-dark); margin-bottom: 20px;">Agreement Terms & Conditions</h5>
+                <div class="terms-container" style="background: var(--soma-bg); padding: 25px; border-radius: 12px; border: 1px solid rgba(190, 150, 118, 0.2);">
+                    <h5 style="color: var(--soma-secondary); margin-bottom: 20px;">Agreement Terms & Conditions</h5>
 
-                    <div style="font-size: 14px; line-height: 1.8; color: #555;">
+                    <div style="font-size: 14px; line-height: 1.8; color: var(--soma-secondary);">
                         <ul style="list-style: none; padding: 0;">
           
                                                  <li class="mb-3">
-                                <i class="fas fa-calendar-check" style="color: #c49a72; margin-right: 10px;"></i>
+                                <i class="fas fa-calendar-check" style="color: var(--soma-primary); margin-right: 10px;"></i>
                                 <strong>Validity:</strong> Packages are valid for 30 days starting from the payment date. Validity begins from your first attended class.
                             </li>
              
                
                                                               <li class="mb-3">
-                                <i class="fas fa-ban" style="color: #c49a72; margin-right: 10px;"></i>
+                                <i class="fas fa-ban" style="color: var(--soma-primary); margin-right: 10px;"></i>
                                 <strong>Non-Refundable:</strong> Class packs are non-refundable, non-transferable between individuals or studios, and <strong>cannot be extended</strong> under any circumstances (including injury or illness).
                             </li>
 
                                
                                                            <li class="mb-3">
-                                <i class="fas fa-clock" style="color: #c49a72; margin-right: 10px;"></i>
+                                <i class="fas fa-clock" style="color: var(--soma-primary); margin-right: 10px;"></i>
                                 <strong>Cancellation Policy:</strong> Cancellations or rescheduling must be made at least <strong>24 hours</strong> prior to your class. Late cancellations or no-shows will result in the loss of that class credit with no refund provided.
                             </li>
 
                                                            <li class="mb-3">
-                                <i class="fas fa-mobile-alt" style="color: #c49a72; margin-right: 10px;"></i>
+                                <i class="fas fa-mobile-alt" style="color: var(--soma-primary); margin-right: 10px;"></i>
                                 <strong>Studio Etiquette:</strong> Please keep mobile devices in silent mode before entering the studio.
                             </li>
 
                                                            <li class="mb-3">
-                                <i class="fas fa-door-open" style="color: #c49a72; margin-right: 10px;"></i>
+                                <i class="fas fa-door-open" style="color: var(--soma-primary); margin-right: 10px;"></i>
                                 <strong>Room Access:</strong> Please wait in the designated area until your scheduled session time. Kindly exit promptly upon conclusion to allow for space preparation.
                           
                              </li>
                         </ul>
 
-                        <p style="font-size: 12px; color: #999; margin-top: 20px; border-top: 1px solid #e1dcd6; padding-top: 15px;">
+                        <p style="font-size: 12px; color: var(--soma-secondary); opacity: 0.7; margin-top: 20px; border-top: 1px solid rgba(190, 150, 118, 0.2); padding-top: 15px;">
                             <em>Note: Terms & conditions are subject to change without prior notice.</em>
                         </p>
                     </div>
@@ -359,7 +377,7 @@
 
             <div class="actions">
                 <button type="button" class="btn-decline" onclick="declineTerms()">Decline</button>
-                <button type="button" class="btn-accept" onclick="acceptTerms()">Accept</button>
+                <button type="button" class="btn-accept" onclick="acceptTerms()" style="background-color: var(--soma-secondary);">Accept</button>
             </div>
         </div>
     </div>

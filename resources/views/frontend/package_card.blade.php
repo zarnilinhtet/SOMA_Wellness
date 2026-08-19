@@ -1,18 +1,40 @@
+<!-- Added Google Fonts for Fahkwang -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
+    /* --- Brand Variables --- */
+    :root {
+        --soma-primary: #BE9676; /* Perfect Beige */
+        --soma-secondary: #8D7E71; /* Desert Taupe */
+        --soma-bg: #FFF7E9; /* Soft Cream */
+        
+        /* Aliases to map old color names to new brand colors */
+        --soma-cream: var(--soma-bg);
+        --soma-taupe: var(--soma-secondary);
+        --soma-beige: var(--soma-primary);
+        --text-dark: var(--soma-secondary); 
+    }
+
+    /* --- Global Font Settings --- */
+    body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+        font-family: 'Fahkwang', sans-serif !important;
+    }
+
     /* --- Elegant Heading Area --- */
     .package-header h2 {
-        font-family: 'Cormorant Garamond', serif;
         font-size: 3rem;
-        color: var(--text-dark, #2b2b2b);
+        color: var(--text-dark);
         font-weight: 500;
     }
 
     .package-header p {
-        color: var(--soma-taupe, #706e6b);
+        color: var(--soma-taupe);
         font-size: 1.05rem;
         letter-spacing: 0.3px;
     }
-
 
     /* --- Search Box --- */
     .search-box {
@@ -20,7 +42,6 @@
         width: 100%;
         max-width: 350px;
         margin: 0 auto;
-        /* Added to center horizontally */
     }
 
     .search-box i {
@@ -28,32 +49,31 @@
         left: 18px;
         top: 50%;
         transform: translateY(-50%);
-        color: var(--soma-taupe, #706e6b);
+        color: var(--soma-taupe);
         opacity: 0.7;
         pointer-events: none;
-        /* Prevents icon from blocking input clicks */
     }
 
     .search-box input {
         width: 100%;
         padding: 12px 20px 12px 45px;
-        border: 1px solid rgba(190, 150, 118, 0.2);
+        border: 1px solid rgba(190, 150, 118, 0.4); /* #BE9676 with opacity */
         border-radius: 50px;
         font-size: 0.95rem;
-        color: var(--text-dark, #2b2b2b);
-        background: #f8f6f2;
+        color: var(--text-dark);
+        background: var(--soma-bg);
         outline: none;
         transition: all 0.3s ease;
     }
 
     .search-box input:focus {
         background: #ffffff;
-        border-color: var(--soma-beige, #c49a72);
-        box-shadow: 0 4px 15px rgba(190, 150, 118, 0.1);
+        border-color: var(--soma-beige);
+        box-shadow: 0 4px 15px rgba(190, 150, 118, 0.15);
     }
 
     .search-box input::placeholder {
-        color: #999;
+        color: rgba(141, 126, 113, 0.6);
     }
 
     /* --- Scrollable Filter Container --- */
@@ -61,26 +81,22 @@
         width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        /* Smooth scrolling on iOS */
         scrollbar-width: none;
-        /* Firefox */
         padding-bottom: 5px;
         display: flex;
         justify-content: center;
-        /* Center on desktop */
     }
 
     .filter-scroll-container::-webkit-scrollbar {
         display: none;
-        /* Chrome/Safari */
     }
 
     .filter-group {
         display: inline-flex;
-        background: #f8f6f2;
+        background: var(--soma-bg);
         padding: 0.5rem;
         border-radius: 50px;
-        border: 1px solid rgba(190, 150, 118, 0.1);
+        border: 1px solid rgba(190, 150, 118, 0.2);
         white-space: nowrap;
     }
 
@@ -92,41 +108,38 @@
         cursor: pointer;
         font-size: 0.9rem;
         font-weight: 500;
-        color: var(--soma-taupe, #706e6b);
+        color: var(--soma-taupe);
         border-radius: 50px;
         transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
 
     .filter-btn.active {
         text-decoration: none !important;
-        background: white;
-        color: var(--text-dark, #2b2b2b);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        background: var(--soma-secondary);
+        color: #ffffff;
+        box-shadow: 0 4px 15px rgba(141, 126, 113, 0.2);
     }
 
     /* --- MOBILE VIEW SCROLL FIX --- */
     @media (max-width: 767px) {
         .filter-scroll-container {
             justify-content: flex-start;
-            /* Start align so left side isn't cut off */
             padding-left: 15px;
-            /* Add spacing on edges */
             padding-right: 15px;
         }
 
         .filter-group {
             flex-shrink: 0;
-            /* Prevent the container from shrinking */
         }
     }
 
     /* --- Package Cards Modded --- */
     .package-card {
         background: #ffffff;
-        border: 1px solid rgba(190, 150, 118, 0.15);
+        border: 1px solid rgba(190, 150, 118, 0.2);
         border-radius: 12px;
         padding: 35px 24px;
-        box-shadow: 0 4px 20px rgba(190, 150, 118, 0.03);
+        box-shadow: 0 4px 20px rgba(190, 150, 118, 0.05);
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
         height: 100%;
@@ -136,21 +149,20 @@
 
     .package-card:hover {
         transform: translateY(-6px);
-        border-color: var(--soma-beige, #c49a72);
-        box-shadow: 0 12px 30px rgba(190, 150, 118, 0.08);
+        border-color: var(--soma-beige);
+        box-shadow: 0 12px 30px rgba(190, 150, 118, 0.12);
     }
 
     .package-title {
-        font-family: 'Cormorant Garamond', serif;
         font-size: 1.6rem;
         font-weight: 600;
-        color: var(--text-dark, #2b2b2b);
+        color: var(--text-dark);
         margin-bottom: 4px;
     }
 
     .package-type {
         font-size: 11px;
-        color: var(--soma-beige, #a67c52);
+        color: var(--soma-beige);
         text-transform: uppercase;
         letter-spacing: 2px;
         font-weight: 600;
@@ -159,14 +171,14 @@
     .package-desc {
         font-size: 14px;
         line-height: 1.6;
-        color: #6e6e6e;
+        color: var(--soma-secondary);
         margin: 20px 0;
         flex-grow: 1;
     }
 
     /* --- Loyal Point Box --- */
     .loyal-box {
-        background: rgba(245, 230, 211, 0.25);
+        background: rgba(190, 150, 118, 0.1);
         border: 1px dashed rgba(190, 150, 118, 0.4);
         border-radius: 8px;
         padding: 10px;
@@ -178,15 +190,16 @@
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        color: #8c6b4f;
+        color: var(--soma-primary);
         display: block;
         margin-bottom: 2px;
+        font-weight: 600;
     }
 
     .loyal-box .points {
         font-weight: 600;
         font-size: 15px;
-        color: var(--text-dark, #2b2b2b);
+        color: var(--text-dark);
     }
 
     /* --- Minimalist Badges --- */
@@ -198,13 +211,13 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        background: #f4f4f4;
-        color: #777;
+        background: rgba(141, 126, 113, 0.1);
+        color: var(--soma-secondary);
     }
 
     .status-badge.active {
-        background: #eef9f1;
-        color: #1e7e34;
+        background: rgba(190, 150, 118, 0.15);
+        color: var(--soma-primary);
     }
 
     /* --- Real App Pricing & Discount Styles --- */
@@ -214,16 +227,15 @@
 
     .original-price {
         font-size: 16px;
-        color: #999;
+        color: rgba(141, 126, 113, 0.6);
         text-decoration: line-through;
-        font-family: 'Cormorant Garamond', serif;
         margin-bottom: -4px;
     }
 
     .discount-badge-inline {
         display: inline-block;
-        background: #eef9f1;
-        color: #1e7e34;
+        background: rgba(190, 150, 118, 0.15);
+        color: var(--soma-primary);
         font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
@@ -235,9 +247,8 @@
 
     .price {
         font-size: 32px;
-        font-family: 'Cormorant Garamond', serif;
         font-weight: 600;
-        color: var(--text-dark, #2b2b2b);
+        color: var(--text-dark);
         line-height: 1;
     }
 
@@ -249,14 +260,15 @@
 
     .price-wrap small {
         font-size: 12px;
-        color: #999;
+        color: var(--soma-secondary);
+        opacity: 0.8;
         display: block;
         margin-top: 4px;
     }
 
     /* --- Buttons --- */
     .btn-premium {
-        background-color: var(--soma-taupe, #706e6b);
+        background-color: var(--soma-taupe);
         color: #ffffff;
         border-radius: 50px;
         padding: 12px 30px;
@@ -272,7 +284,7 @@
     }
 
     .btn-premium:hover {
-        background-color: var(--soma-beige, #c49a72);
+        background-color: var(--soma-beige);
         color: #ffffff;
         transform: translateY(-1px);
     }
@@ -308,26 +320,26 @@
         text-decoration: none;
         font-weight: 500;
         font-size: 0.85rem;
-        border: 1px solid rgba(190, 150, 118, 0.2);
+        border: 1px solid rgba(190, 150, 118, 0.3);
         background: transparent;
-        color: var(--soma-taupe, #706e6b);
+        color: var(--soma-taupe);
         transition: all 0.3s ease;
     }
 
     .soma-pagination li a:hover {
-        background: var(--soma-beige, #c49a72);
+        background: var(--soma-secondary);
         color: white;
-        border-color: var(--soma-beige, #c49a72);
+        border-color: var(--soma-secondary);
     }
 
     .soma-pagination li.active span {
-        background: var(--soma-beige, #c49a72);
+        background: var(--soma-secondary);
         color: white;
-        border-color: var(--soma-beige, #c49a72);
+        border-color: var(--soma-secondary);
     }
 
     .soma-pagination li.disabled span {
-        opacity: 0.3;
+        opacity: 0.4;
         cursor: not-allowed;
     }
 
@@ -346,9 +358,9 @@
         gap: 4px;
     }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <!-- MAIN PRODUCT SECTION -->
-<div class="bg-section py-5">
+<div class="bg-section py-5" style="background-color: var(--soma-bg);">
     <div class="container py-4">
 
         <div class="text-center package-header mb-5">
@@ -428,10 +440,10 @@
 
                             {{ $duration }} - {{ $package->class_count ?? '-' }} classes
                         </div>
-                        <div>{{ $package->category->name ?? '-' }}</div>
+                        <div style="color: var(--soma-secondary);">{{ $package->category->name ?? '-' }}</div>
 
                         <div
-                            style="width: 30px; height: 1px; background-color: rgba(190, 150, 118, 0.25); margin: 15px auto;">
+                            style="width: 30px; height: 1px; background-color: rgba(190, 150, 118, 0.4); margin: 15px auto;">
                         </div>
 
                         <div class="loyal-box">
@@ -517,7 +529,7 @@
                                 Buy Now
                             </button>
                         @else
-                            <button class="btn-premium btn-full" style="background-color: #cccccc; color: #666666;" disabled>
+                            <button class="btn-premium btn-full" style="background-color: #cccccc; color: #666666; cursor: not-allowed;" disabled>
                                 Unavailable
                             </button>
                         @endif
@@ -578,8 +590,8 @@
             cancelButtonText: 'Cancel',
 
             confirmButtonColor: '#BE9676',
-            denyButtonColor: '#28a745',
-            cancelButtonColor: '#999'
+            denyButtonColor: '#8D7E71', // Updated to match brand
+            cancelButtonColor: '#cbd5e1' // Updated to softer color
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = `/buy/package/viacoin/${classId}`;

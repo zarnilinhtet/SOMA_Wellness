@@ -1,6 +1,11 @@
 @extends('layouts.link')
 
 @section('content')
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --soma-cream: #FFF7E9;
@@ -10,11 +15,16 @@
             --text-light: #F8F5F2;
         }
 
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, textarea, label {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
         .profile-page {
             background: radial-gradient(circle at top right, #ffffff, var(--soma-cream));
             min-height: 100vh;
             padding: 60px 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: 'Fahkwang', sans-serif !important;
         }
 
         .profile-header {

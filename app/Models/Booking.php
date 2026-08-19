@@ -6,15 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Booking extends Model
 {
-    protected $fillable = [
-        'registered_id',
-        'selected_class_id',
-        'package_id',
-        'status',
-        'cancellation_reason',
-        'byWho'
-    ];
 
+    protected $guarded = [];
     public function package()
     {
         return $this->belongsTo(Package::class, 'package_id');

@@ -1,237 +1,105 @@
 @extends('layouts.link')
 @section('content')
 
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
     <style>
-        /* --- General Section Styling --- */
-        .section-bg {
-            background-color: var(--soma-cream);
-            padding-bottom: 2rem;
-            padding-top: 5rem;
+        /* --- Brand Variables --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+            
+            /* Aliases for existing variables */
+            --soma-cream: var(--soma-bg);
+            --soma-taupe: var(--soma-secondary);
+            --soma-beige: var(--soma-primary);
         }
 
-        .section-title {
-            font-family: 'Cormorant Garamond', serif;
-            color: var(--soma-taupe);
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, table, th, td {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
+        /* --- General Section Styling --- */
+        .section-bg { background-color: var(--soma-bg); padding-bottom: 2rem; padding-top: 5rem; }
+        .section-title { color: var(--soma-secondary); font-size: 3.5rem; margin-bottom: 1rem; font-weight: 600; }
+        .modern-divider { width: 60px; height: 3px; background-color: var(--soma-primary); margin: 4rem auto; border-radius: 3px; }
+        
+        /* --- Custom Table Theming with #8D7E71 & #BE9676 --- */
+        .color-dark { color: var(--soma-secondary) !important; }
+        .color-light { color: var(--soma-primary) !important; }
+
+        .schedule-table-card { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            border: 1px solid rgba(190, 150, 118, 0.4); 
+            box-shadow: 0 6px 16px rgba(141, 126, 113, 0.12); 
+            padding: 0; 
+            margin-bottom: 30px; 
+            overflow: hidden; 
         }
         
-        /* --- Divider --- */
-        .modern-divider {
-            width: 60px;
-            height: 3px;
-            background-color: var(--soma-beige);
-            margin: 4rem auto;
-            border-radius: 3px;
+        .schedule-table { margin-bottom: 0; }
+
+        .schedule-table thead th { 
+            background-color: var(--soma-secondary); color: #ffffff; font-size: 13px; font-weight: 700; padding: 18px 14px; text-transform: uppercase; letter-spacing: 0.5px; border: none;
         }
 
-        /* --- Custom Table Styling (Matching Screenshot) --- */
-        .schedule-table-card {
-            background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #eef2f5;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-            padding: 20px;
-            margin-bottom: 30px;
+        .schedule-table tbody td { 
+            padding: 18px 14px; vertical-align: middle; border-bottom: 1px solid rgba(190, 150, 118, 0.25); color: var(--soma-secondary); font-size: 14px; font-weight: 500;
         }
 
-        .schedule-table thead th {
-            border-bottom: 2px solid #f1f5f9;
-            border-top: none;
-            color: #475569;
-            font-size: 13px;
-            font-weight: 700;
-            padding: 16px 12px;
-            background-color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        .schedule-table tbody tr:hover td { background-color: rgba(190, 150, 118, 0.08); }
+        .schedule-table tbody tr:last-child td { border-bottom: none; }
 
-        .schedule-table tbody td {
-            padding: 16px 12px;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-            color: #334155;
-            font-size: 14px;
-        }
+        .date-soma-text { color: var(--soma-secondary); font-size: 13px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .date-soma-text i { color: var(--soma-primary); }
+        .time-text { font-weight: 700; color: var(--soma-secondary); font-size: 14px; display: flex; align-items: center; }
+        .duration-text { font-size: 12px; color: rgba(141, 126, 113, 0.85); margin-top: 2px; }
+        .class-main-title { font-size: 15px; font-weight: 800; color: var(--soma-secondary); margin: 0 0 4px 0; letter-spacing: -0.3px; }
+        .badge-status-active-text { color: var(--soma-primary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .day-badge { display: inline-block; padding: 6px 12px; background-color: #ffffff; border: 1px solid var(--soma-primary); border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--soma-secondary); margin-right: 4px; margin-bottom: 4px; }
+        .status-pill { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; margin-top: 4px; }
+        .pill-approved { background-color: var(--soma-secondary); color: #ffffff; }
+        .pill-waitlist { background-color: var(--soma-primary); color: #ffffff; }
+        .pill-cancelled { border: 1px solid var(--soma-secondary); color: var(--soma-secondary); background: transparent; }
+        .pill-open { background-color: rgba(190, 150, 118, 0.15); color: var(--soma-secondary); }
+        .pill-full { background-color: rgba(141, 126, 113, 0.15); color: var(--soma-secondary); }
 
-        .date-soma-text {
-            color: #BE9676; /* Changed from Blue to Soma Color */
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .action-buttons-flex { display: flex; gap: 6px; flex-wrap: wrap; flex-direction: column; } 
+        .btn-action-secondary { background: #ffffff; color: var(--soma-secondary); border: 1px solid var(--soma-secondary); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; transition: all 0.2s ease; }
+        .btn-action-secondary:hover { background: var(--soma-secondary); color: #ffffff; }
+        .btn-soma-primary { background-color: var(--soma-primary); color: #ffffff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; transition: all 0.2s ease; }
+        .btn-soma-primary:hover { background-color: var(--soma-secondary); color: #ffffff; }
+        .btn-soma-secondary { background-color: var(--soma-secondary); color: #ffffff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; transition: all 0.2s ease; }
+        .btn-soma-secondary:hover { background-color: var(--soma-primary); color: #ffffff; }
+        .btn-soma-danger { border: 1px solid var(--soma-secondary); color: var(--soma-secondary); background: transparent; border-radius: 6px; font-size: 12px; font-weight: 600; transition: all 0.2s ease; }
+        .btn-soma-danger:hover { background-color: var(--soma-secondary); color: #ffffff; }
+        .btn-soma-teaching { background-color: rgba(190, 150, 118, 0.2); color: var(--soma-secondary); border: 1px solid var(--soma-primary); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: default; }
+        
+        .table-responsive { min-height: 350px; padding-bottom: 20px; overflow-x: auto; }
 
-        .time-text {
-            font-weight: 700;
-            color: #1e293b;
-            font-size: 14px;
-        }
-
-        .duration-text {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 2px;
-        }
-
-        .class-main-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: #1a1f2c;
-            margin: 0 0 4px 0;
-            letter-spacing: -0.3px;
-        }
-
-        .badge-status-active-text {
-            color: #BE9676;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .day-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #475569;
-            margin-right: 4px;
-            margin-bottom: 4px;
-        }
-
-        /* Status Pill */
-        .status-pill {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-block;
-            margin-top: 4px;
-        }
-        .pill-approved { background-color: #e6f9f3; color: #10b981; }
-        .pill-waitlist { background-color: #fef3c7; color: #d97706; }
-        .pill-cancelled { background-color: #fee2e2; color: #ef4444; }
-        .pill-open { background-color: #e0f2fe; color: #0369a1; }
-        .pill-full { background-color: #f3f4f6; color: #6b7280; }
-
-        /* Action Buttons from Original Card */
-        .action-buttons-flex {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .btn-action-primary, .btn-action-wait, .btn-action-cancel, .btn-action-secondary {
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            transition: background 0.15s ease;
-            white-space: nowrap;
-        }
-
-        .btn-soma-secondary {
-                background-color: var(--soma-taupe);
-                color: var(--text-light);
-                border: none;
-        }
-
-        .btn-soma-secondary:hover {
-                background-color: var(--text-dark);
-                color: var(--text-light);
-        }
-
-        .btn-soma-danger {
-                background-color: #f87171;
-                color: var(--text-light);
-                border: none;
-        }
-
-        .btn-soma-danger:hover {
-                background-color: #ef4444;
-                color: var(--text-light);
-        }
-
-        .btn-soma-primary {
-                background-color: var(--soma-taupe);
-                color: var(--text-light);
-                border: none;
-        }
-
-        .btn-soma-primary:hover {
-                background-color: var(--text-dark);
-                color: var(--text-light);
-        }
-
-           .btn-soma-teaching {
-                background-color: #897af7;
-                color: var(--text-light);
-                border: none;
-            }
-
-            .btn-soma-teaching:hover {
-                background-color: #7a6ae0;
-                color: var(--text-light);
-            }
-        .btn-action-primary { background: #BE9676; color: #ffffff; }
-        .btn-action-primary:hover { background: #a67c5c; }
-        .btn-action-wait { background: #d1c8b9; color: #334155; }
-        .btn-action-wait:hover { background: #b7a78c; }
-        .btn-action-cancel { background: #f87171; color: #ffffff; }
-        .btn-action-cancel:hover { background: #ef4444; }
-        .btn-action-secondary { background: #ffffff; color: #475569; border: 1px solid #e2e8f0; }
-        .btn-action-secondary:hover { background: #f8fafc; }
-
-        /* --- Original Filter Area Styling --- */
-        .soma-filter-workspace {
-            background: #ffffff;
-            padding: 28px;
-            border-radius: 24px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.06);
-            border: 1px solid #f1f1f1;
-            margin-bottom: 30px;
-        }
+        /* --- Filter Area --- */
+        .soma-filter-workspace { background: #ffffff; padding: 28px; border-radius: 24px; box-shadow: 0 10px 35px rgba(0, 0, 0, 0.06); border: 1px solid #f1f1f1; margin-bottom: 30px; }
         .filter-header { margin-bottom: 24px; }
         .filter-header h3 { font-size: 28px; font-weight: 700; color: #222; margin-bottom: 6px; }
         .filter-header p { color: #777; font-size: 15px; margin: 0; }
-        
         .input-group { position: relative; }
-        .input-group i {
-            position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; z-index: 2;
-        }
-        .input-group div.from, .input-group div.to {
-            position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; z-index: 2;
-        }
-        .input-group input, .input-group select {
-            width: 100%; height: 56px; border-radius: 16px !important; border: 1px solid #e5e7eb; padding: 0 18px 0 46px; font-size: 15px; background: #fafafa; transition: all 0.25s ease; outline: none; appearance: none;
-        }
-        .input-group input:focus, .input-group select:focus {
-            border-color: #c9a46c; background: #fff; box-shadow: 0 0 0 4px rgba(201, 164, 108, 0.12);
-        }
-        .btn-reset {
-            height: 56px; border-radius: 14px; background: var(--soma-cream); color: #444; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.25s ease;
-        }
-        .btn-reset:hover { background: #e5e7eb; }
-
-        @media (max-width:768px) {
-            .soma-filter-workspace { padding: 20px; border-radius: 20px; }
-            .filter-header h3 { font-size: 22px; }
-            .input-group input, .input-group select { height: 52px; font-size: 14px; }
-        }
-
-        /* --- Yoga Gallery --- */
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; z-index: 2; }
+        .input-group div.from, .input-group div.to { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; z-index: 2; }
+        .input-group input, .input-group select { width: 100%; height: 56px; border-radius: 16px !important; border: 1px solid #e5e7eb; padding: 0 18px 0 46px; font-size: 15px; background: #fafafa; transition: all 0.25s ease; outline: none; appearance: none; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--soma-primary); background: #fff; box-shadow: 0 0 0 4px rgba(190, 150, 118, 0.12); }
+        .btn-reset { height: 56px; border-radius: 14px; background: #f8f9fa; color: var(--soma-secondary); border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.25s ease; }
+        .btn-reset:hover { background: var(--soma-secondary); color: white; border-color: var(--soma-secondary); }
+        
         .gallery-item { position: relative; overflow: hidden; border-radius: 12px; width: 100%; }
         .gallery-wide { aspect-ratio: 16/9; }
         .gallery-square { aspect-ratio: 1/1; }
@@ -239,15 +107,14 @@
         .gallery-item:hover img { transform: scale(1.08); }
         .gallery-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(58, 51, 44, 0.8) 0%, rgba(58, 51, 44, 0) 60%); display: flex; align-items: flex-end; padding: 2rem; opacity: 0; transition: opacity 0.4s ease; }
         .gallery-item:hover .gallery-overlay { opacity: 1; }
-        .gallery-overlay h4 { color: var(--soma-cream); margin: 0; font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; transform: translateY(20px); transition: transform 0.4s ease; }
+        .gallery-overlay h4 { color: var(--soma-bg); margin: 0; font-size: 1.8rem; transform: translateY(20px); transition: transform 0.4s ease; font-weight: 500; }
         .gallery-item:hover .gallery-overlay h4 { transform: translateY(0); }
         
-        /* Pagination */
-        .soma-pagination-wrap { display: flex; justify-content: center; }
+        .soma-pagination-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
         .soma-pagination { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0; }
-        .soma-pagination li a, .soma-pagination li span { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; height: 38px; border-radius: 50%; text-decoration: none; font-weight: 500; font-size: 0.85rem; border: 1px solid rgba(190, 150, 118, 0.2); background: transparent; color: var(--soma-taupe); transition: all 0.3s ease; }
-        .soma-pagination li a:hover, .soma-pagination li.active span { background: var(--soma-beige); color: white; border-color: var(--soma-beige); }
-        .soma-pagination li.disabled span { opacity: 0.3; cursor: not-allowed; }
+        .soma-pagination li a, .soma-pagination li span { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; height: 38px; border-radius: 50%; text-decoration: none; font-weight: 600; font-size: 0.85rem; border: 1px solid var(--soma-primary); background: transparent; color: var(--soma-secondary); transition: all 0.3s ease; }
+        .soma-pagination li a:hover, .soma-pagination li.active span { background: var(--soma-secondary); color: white; border-color: var(--soma-secondary); }
+        .soma-pagination li.disabled span { opacity: 0.4; cursor: not-allowed; border-color: rgba(141, 126, 113, 0.3); color: var(--soma-secondary); }
     </style>
 
     <div class="section-bg">
@@ -260,25 +127,21 @@
     </div>
 
     <div class="container mt-4">
-        <!-- LUXURY FILTER ENGINE MATRIX -->
         <div class="soma-filter-workspace">
             <div class="filter-header">
                 <h3>Find Your Class</h3>
                 <p>Search, filter and discover sessions instantly</p>
             </div>
 
-            {{-- SEARCH - Full Width --}}
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <div class="input-group">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" name="search" value="{{ request('search') }}"
-                            placeholder="Search classes...">
+                        <input type="text" id="searchInput" name="search" value="{{ request('search') }}" placeholder="Search classes...">
                     </div>
                 </div>
             </div>
 
-            {{-- 5-COLUMN GRID --}}
             <div class="row g-3">
                 <div class="col-md">
                     <div class="input-group">
@@ -327,91 +190,130 @@
         </div>
 
         <div id="classResults">
-            <!-- NEW TABLE LIST UI -->
             <div class="schedule-table-card">
                 <div class="table-responsive">
-                    <table class="table schedule-table table-hover w-100">
+                    <table class="table schedule-table w-100">
                         <thead>
                             <tr>
                                 <th style="width: 5%;">No.</th>
                                 <th style="width: 15%;">Date & Time</th>
-                                <th style="width: 25%;">Class Info</th>
-                                <th style="width: 10%;">Days</th>
+                                <th style="width: 15%;">Class Duration</th>
+                                <th style="width: 20%;">Class Info</th>
+                                <th style="width: 10%;">Day</th>
                                 <th style="width: 15%;">Instructors</th>
-                                <th style="width: 15%;">Availability</th>
-                                <th style="width: 15%;">Actions</th>
+                                <th style="width: 10%;">Availability</th>
+                                <th style="width: 10%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($classes as $index => $class)
                                 @php
+                                    // Controller မှ ပေးပို့လာသော target_date ကို အသုံးပြုမည်
+                                    $targetDateStr = $class->target_date ?? \Carbon\Carbon::today('Asia/Yangon')->format('Y-m-d');
+                                    $targetDate = \Carbon\Carbon::parse($targetDateStr);
+                                    
+                                    $displayDayName = $targetDate->format('l'); // ဥပမာ - 'Monday'
+
                                     $startTime = \Carbon\Carbon::parse($class->start_time);
                                     $endTime = \Carbon\Carbon::parse($class->end_time);
                                     $duration = $startTime->diffInMinutes($endTime);
-                                    // Occupancy Logic
+                                    
                                     $totalCapacity = $class->capacity ?? 0;
-                                    $bookedSlots = $bookingsAll->where('selected_class_id', $class->id)->where('status', 'confirmed')->count();
+                                    
+                                    // Target Date ဖြင့်သာ Availability ကို စစ်ဆေးပါမည်
+                                    $bookedSlots = $bookingsAll->where('selected_class_id', $class->id)
+                                        ->where('status', 'confirmed')
+                                        ->filter(function($b) use ($targetDateStr) {
+                                            if (!empty($b->booked_date)) {
+                                                $bDate = \Carbon\Carbon::parse($b->booked_date)->format('Y-m-d');
+                                                return $bDate === $targetDateStr;
+                                            }
+                                            return false;
+                                        })->count();
+
                                     if ($bookedSlots > $totalCapacity) {
                                         $bookedSlots = $totalCapacity;
                                     }
                                     $remainingSlots = max(0, $totalCapacity - $bookedSlots);
 
-                                    // Days Array Parse
-                                    $days = is_string($class->days) ? json_decode($class->days, true) : ($class->days ?? []);
-
-                                    // Instructor Check-in & Over logic
-                                    $todayDate = \Carbon\Carbon::now()->format('Y-m-d');
-                                    $now = \Carbon\Carbon::now();
                                     $instructorUserIds = $class->instructor_ids ?? [];
-                                    $classEndTime = \Carbon\Carbon::parse($todayDate . ' ' . ($class->end_time ?? $class->time_to ?? '23:59:59'));
-                                    $isClassOver = $now->greaterThan($classEndTime);
-
+                                    $classEndTimeToday = \Carbon\Carbon::parse($targetDateStr . ' ' . $class->end_time, 'Asia/Yangon');
+                                    $isClassOver = \Carbon\Carbon::now('Asia/Yangon')->greaterThan($classEndTimeToday);
+                                    
                                     $isInstructorCheckedInToday = false;
-                                    if (!$isClassOver) {
+                                    if (!$isClassOver && $targetDateStr === \Carbon\Carbon::today('Asia/Yangon')->format('Y-m-d')) {
                                         $isInstructorCheckedInToday = \App\Models\Attendance::where('class_id', $class->id)
                                             ->whereIn('instructor_id', $instructorUserIds)
-                                            ->whereDate('attendance_date', $todayDate)
+                                            ->whereDate('attendance_date', $targetDateStr)
                                             ->where('attended', 1)
                                             ->exists();
                                     }
 
-                                    // Booking states
-                                    $confirmedBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'confirmed')->first();
-                                    $cancelledBooking = $bookings->where('selected_class_id', $class->id)->where('status', 'cancelled')->first();
-                                    $hasAnyBooking = $bookings->where('selected_class_id', $class->id)->whereIn('status', ['confirmed', 'waitlisted'])->first();
+                                    // User ကိုယ်တိုင် ထို Target Date တွင် Booking လုပ်ထားခြင်း ရှိမရှိ စစ်ဆေးပါမည်
+                                    $confirmedBooking = collect();
+                                    $waitlistedBooking = collect();
+                                    $canCancel = false;
 
-                                    // Cancellation Window
-                                    $classStart = \Carbon\Carbon::parse($class->start_date . ' ' . $class->start_time);
-                                    $canCancel = now()->diffInHours($classStart, false) >= 48;
+                                    if(auth()->check()) {
+                                        $confirmedBooking = $bookings->where('selected_class_id', $class->id)
+                                            ->where('status', 'confirmed')
+                                            ->filter(function($b) use ($targetDateStr) {
+                                                if (!empty($b->booked_date)) {
+                                                    return \Carbon\Carbon::parse($b->booked_date)->format('Y-m-d') === $targetDateStr;
+                                                }
+                                                return false;
+                                            })->first();
 
-                                    // Duration Calculation
-                                    $duration = \Carbon\Carbon::parse($class->start_time)->diffInMinutes(\Carbon\Carbon::parse($class->end_time));
+                                        $waitlistedBooking = $bookings->where('selected_class_id', $class->id)
+                                            ->where('status', 'waitlisted')
+                                            ->filter(function($b) use ($targetDateStr) {
+                                                if (!empty($b->booked_date)) {
+                                                    return \Carbon\Carbon::parse($b->booked_date)->format('Y-m-d') === $targetDateStr;
+                                                }
+                                                return false;
+                                            })->first();
+
+                                        $classStart = \Carbon\Carbon::parse($targetDateStr . ' ' . $class->start_time, 'Asia/Yangon');
+                                        $canCancel = \Carbon\Carbon::now('Asia/Yangon')->diffInHours($classStart, false) >= 48;
+                                    }
+                                    
+                                    $hasAnyBooking = $confirmedBooking || $waitlistedBooking;
                                 @endphp
+                                
                                 <tr>
-                                    <td class="text-muted">{{ $loop->iteration }}</td>
+                                    <td class="color-dark fw-bold">{{ $loop->iteration }}</td>
                                     
                                     <td>
                                         <div class="date-soma-text">
-                                            <i class="far fa-calendar-alt"></i> 
-                                            {{ \Carbon\Carbon::parse($class->start_date)->format('l, F j') }}
+                                            <i class="far fa-calendar-check"></i> 
+                                            {{ $targetDate->format('d M Y') }}
                                         </div>
-                                        <div class="time-text">{{ $startTime->format('g:i a') }}</div>
-                                        <div class="duration-text">{{ $duration }} min</div>
+                                        <div class="time-text mt-1">
+                                            <i class="far fa-clock me-1 color-light" style="font-size: 0.9rem;"></i> 
+                                            <span class="color-dark">{{ $startTime->format('h:i A') }} - {{ $endTime->format('h:i A') }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="d-flex flex-column" style="font-size: 0.85rem;">
+                                            <span class="color-dark fw-bold"><i class="fas fa-play-circle me-1"></i> {{ \Carbon\Carbon::parse($class->start_date)->format('d M Y') }}</span>
+                                            <span class="color-light fw-bold mt-1"><i class="fas fa-stop-circle me-1"></i> {{ $class->end_date ? \Carbon\Carbon::parse($class->end_date)->format('d M Y') : 'Ongoing' }}</span>
+                                        </div>
+                                        <div class="duration-text mt-2"><i class="fas fa-hourglass-half me-1"></i>{{ $duration }} mins / day</div>
                                     </td>
                                     
                                     <td>
                                         <h4 class="class-main-title">{{ $class->class_name }}</h4>
                                         <div class="badge-status-active-text">{{ $class->category->name }}</div>
                                         
-                                        <!-- Status Badge Logic from Original Card -->
-                                        @if ($class->status == 'book')
+                                        @if ($class->status == 'cancelled')
+                                            <span class="status-pill pill-cancelled">Cancelled</span>
+                                        @else
                                             @auth
                                                 @if($confirmedBooking)
                                                     <span class="status-pill pill-approved">Joined</span>
-                                                @elseif($bookings->where('selected_class_id', $class->id)->where('status', 'waitlisted')->first())
+                                                @elseif($waitlistedBooking)
                                                     <span class="status-pill pill-waitlist">Waitlisted</span>
-                                                @elseif($cancelledBooking)
-                                                    <span class="status-pill pill-cancelled">Cancelled</span>
                                                 @else
                                                     @if($remainingSlots == 0)
                                                         <span class="status-pill pill-full">Full</span>
@@ -422,65 +324,59 @@
                                             @else
                                                 <span class="status-pill pill-open">Available</span>
                                             @endauth
-                                        @elseif ($class->status == 'completed')
-                                            <span class="status-pill pill-full">Completed</span>
-                                        @elseif ($class->status == 'cancelled')
-                                            <span class="status-pill pill-cancelled">Cancelled</span>
                                         @endif
                                     </td>
                                     
                                     <td>
-                                        @if(!empty($days))
-                                            @foreach($days as $day)
-                                                <span class="day-badge">{{ $day }}</span>
-                                            @endforeach
+                                        @if($displayDayName)
+                                            <span class="day-badge">{{ $displayDayName }}</span>
                                         @else
-                                            <span class="text-muted small">-</span>
+                                            <span class="color-light small">-</span>
                                         @endif
                                     </td>
                                     
-                                    <td class="text-muted small">
+                                    <td class="color-dark small">
                                         @foreach ($class->instructor as $inst)
-                                            <div class="mb-1"><i class="fas fa-user-circle me-1"></i> Tr. {{ $inst['user']['name'] }}</div>
+                                            <div class="mb-1 fw-bold"><i class="fas fa-user-circle me-1 color-light"></i> Tr. {{ $inst['user']['name'] }}</div>
                                         @endforeach
                                     </td>
                                     
                                     <td>
-                                        <div class="small text-muted fw-bold mb-1">{{ $bookedSlots }} / {{ $totalCapacity }} Slots</div>
+                                        <div class="small color-dark fw-bold mb-1">{{ $bookedSlots }} / {{ $totalCapacity }} Slots</div>
                                         @if($remainingSlots == 0)
-                                            <span class="text-secondary small fw-bold">Waitlist</span>
+                                            <span class="color-dark small fw-bold">Waitlist</span>
                                         @else
-                                            <span class="text-success small fw-bold">{{ $remainingSlots }} Left</span>
+                                            <span class="color-light small fw-bold">{{ $remainingSlots }} Left</span>
                                         @endif
                                     </td>
 
                                     <td>
                                         <div class="action-buttons-flex">
-                                            <button class="btn-action-secondary w-100 mb-1" onclick='window.location.href="{{ route('class.details', $class->id) }}"'>
+                                            <button class="btn-action-secondary w-100" onclick='window.location.href="{{ route('class.details', $class->id) }}"'>
                                                 Details
                                             </button>
                                             
-                                              @auth
-                                                @if(!$confirmedBooking && $class->status == 'book' && !$cancelledBooking)
-                                                    @if($isInstructorCheckedInToday && !$isClassOver)
-                                                        <span class="btn btn-soma-teaching btn-sm rounded-3 px-3 py-1 w-100">Teaching...</span>
-                                                    @else
+                                            @auth
+                                                @if($class->status != 'cancelled')
+                                                    @if(!$confirmedBooking)
                                                         @if($remainingSlots > 0)
-                                                            <button onClick="joinClass({{ $class->id }})" class="btn btn-soma-primary btn-sm rounded-3 px-3 py-1 w-100">
+                                                            <button onClick="joinClass({{ $class->id }}, '{{ $targetDateStr }}')" class="btn btn-soma-primary btn-sm px-3 py-1 w-100">
                                                                 Join
                                                             </button>
                                                         @elseif(!$hasAnyBooking)
-                                                            <button onClick="joinClass({{ $class->id }})" class="btn btn-soma-secondary btn-sm  w-100 rounded-3 px-3 py-1">
+                                                            <button onClick="joinClass({{ $class->id }}, '{{ $targetDateStr }}')" class="btn btn-soma-secondary btn-sm w-100 px-3 py-1">
                                                                 WaitList
                                                             </button>
                                                         @endif
+                                                    @elseif($confirmedBooking && $canCancel)
+                                                        <button onClick="cancelClass({{ $confirmedBooking->id }}, '{{ $targetDateStr }}')" class="btn btn-soma-danger btn-sm px-3 py-1 w-100">
+                                                            Cancel
+                                                        </button>
                                                     @endif
-                                                @elseif($confirmedBooking && $class->status == 'book' && $canCancel)
-                                                    <button onClick="cancelClass({{ $confirmedBooking->id }})" class="btn btn-soma-danger btn-sm rounded-3 px-3 py-1 w-100">
-                                                        Cancel
-                                                    </button>
-                                                @elseif($isInstructorCheckedInToday && !$isClassOver)
-                                                    <span class="btn btn-soma-teaching btn-sm rounded-3 px-3 py-1 w-100">Teaching...</span>
+                                                    
+                                                    @if($isInstructorCheckedInToday && !$isClassOver && $targetDateStr === \Carbon\Carbon::today('Asia/Yangon')->format('Y-m-d'))
+                                                        <span class="btn btn-soma-teaching btn-sm px-3 py-1 w-100 mt-1">Teaching...</span>
+                                                    @endif
                                                 @endif
                                             @endauth
                                         </div>
@@ -488,8 +384,8 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="fas fa-box-open fs-3 mb-2 d-block"></i>
+                                    <td colspan="8" class="text-center py-5 color-dark">
+                                        <i class="fas fa-box-open fs-3 mb-2 d-block color-light"></i>
                                         No classes found matching your criteria.
                                     </td>
                                 </tr>
@@ -530,7 +426,7 @@
 
     <div class="modern-divider"></div>
 
-    @if(!$allImages)
+    @if(!empty($allImages))
     <div class="container text-center mb-5">
         <h1 class="section-title">Yoga Gallery</h1>
         <p class="text-muted">Moments of peace, captured in our sanctuary.</p>
@@ -579,13 +475,13 @@
 
     @if(session('success'))
         <script>
-            Swal.fire({ icon: 'success', title: 'Success', text: "{{ session('success') }}", confirmButtonColor: '#BE9676' });
+            Swal.fire({ icon: 'success', title: 'Success', text: "{{ session('success') }}", confirmButtonColor: '#8D7E71' });
         </script>
     @endif
 
     @if(session('warning'))
         <script>
-            Swal.fire({ icon: 'warning', title: 'Waiting List / Closed', text: "{{ session('warning') }}", confirmButtonColor: '#BE9676' });
+            Swal.fire({ icon: 'warning', title: 'Waiting List / Closed', text: "{{ session('warning') }}", confirmButtonColor: '#8D7E71' });
         </script>
     @endif
 
@@ -611,7 +507,17 @@
                 try {
                     const response = await fetch(`/classes/search?search=${search}&category=${cat}&instructor=${inst}&from_date=${from}&to_date=${to}`);
                     const data = await response.text();
-                    classResults.innerHTML = data;
+
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data, 'text/html');
+
+                    const newTableContent = doc.querySelector('#classResults');
+
+                    if (newTableContent) {
+                        classResults.innerHTML = newTableContent.innerHTML;
+                    } else {
+                        classResults.innerHTML = data;
+                    }
                 } catch (error) {
                     console.log("Search Error:", error);
                 }
@@ -638,10 +544,11 @@
             });
         });
 
-        function joinClass(classId) {
+        // Updated joinClass and cancelClass with date parameters
+        function joinClass(classId, dateStr) {
             @php $isClosed = \App\Models\CloseDate::exists(); @endphp
             @if($isClosed)
-                Swal.fire({ icon: 'warning', title: 'Studio Closed', text: 'You cannot join the class because the studio is closed.', confirmButtonColor: '#BE9676' });
+                Swal.fire({ icon: 'warning', title: 'Studio Closed', text: 'You cannot join the class because the studio is closed.', confirmButtonColor: '#8D7E71' });
                 return;
             @endif
 
@@ -650,30 +557,30 @@
                 text: 'Are you sure you want to join this class?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#BE9676',
-                cancelButtonColor: '#999',
+                confirmButtonColor: '#8D7E71',
+                cancelButtonColor: '#BE9676',
                 confirmButtonText: 'Yes, Join',
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `/join/class/${classId}`;
+                    window.location.href = `/join/class/${classId}?date=${dateStr}`;
                 }
             }); 
         }
 
-        function cancelClass(classId) {
+        function cancelClass(classId, dateStr) {
             Swal.fire({
                 title: 'Cancel Class',
                 text: 'Are you sure you want to cancel this class?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#BE9676',
-                cancelButtonColor: '#999',
+                confirmButtonColor: '#8D7E71',
+                cancelButtonColor: '#BE9676',
                 confirmButtonText: 'Yes, Cancel',
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `/remove/class/${classId}`;
+                    window.location.href = `/remove/class/${classId}?date=${dateStr}`;
                 }
             });
         }

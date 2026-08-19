@@ -1,11 +1,28 @@
 @extends('layouts.link')
 @section('content')
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <style>
+        /* --- Brand Variables --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+        }
+
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div {
+            font-family: 'Fahkwang', sans-serif;
+        }
+
         /* --- Hero Section --- */
         .hero-section {
             padding: 40px 0 60px;
-            background: linear-gradient(135deg, var(--soma-cream) 0%, #ffffff 100%);
+            background: linear-gradient(135deg, var(--soma-bg) 0%, #ffffff 100%);
             min-height: auto;
             display: flex;
             align-items: center;
@@ -15,20 +32,20 @@
         .hero-title {
             font-size: clamp(2.5rem, 5vw, 4.5rem);
             line-height: 1.15;
-            font-weight: 500;
+            font-weight: 500; /* Medium weight from Fahkwang */
             margin-bottom: 24px;
         }
 
         .hero-title i {
             font-style: italic;
-            color: var(--soma-beige);
+            color: var(--soma-primary);
         }
 
         .hero-img-wrapper {
             position: relative;
             border-radius: 30px 100px 30px 30px;
             overflow: hidden;
-            box-shadow: 0 30px 60px rgba(141, 126, 113, 0.15);
+            box-shadow: 0 30px 60px rgba(141, 126, 113, 0.15); /* Using Desert Taupe RGB */
         }
 
         .hero-img {
@@ -48,7 +65,7 @@
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             border: 1px solid rgba(141, 126, 113, 0.15);
-            border-left: 5px solid var(--soma-beige, #8d7e71);
+            border-left: 5px solid var(--soma-secondary);
             border-radius: 16px;
             padding: 16px 20px;
             box-shadow: 0 12px 35px rgba(141, 126, 113, 0.08);
@@ -78,7 +95,7 @@
             min-width: 42px;
             border-radius: 50%;
             background: rgba(141, 126, 113, 0.1);
-            color: var(--soma-beige, #8d7e71);
+            color: var(--soma-secondary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -94,10 +111,10 @@
         .closure-badge {
             display: inline-block;
             font-size: 0.7rem;
-            font-weight: 700;
+            font-weight: 700; /* Bold weight from Fahkwang */
             letter-spacing: 2px;
             text-transform: uppercase;
-            color: var(--soma-beige, #8d7e71);
+            color: var(--soma-secondary);
             margin-bottom: 6px;
         }
 
@@ -118,7 +135,7 @@
         .closure-message strong,
         .closure-message b {
             color: #2c2c2c;
-            font-weight: 600;
+            font-weight: 600; /* Semibold weight from Fahkwang */
         }
 
         .btn-close-notice {
@@ -150,9 +167,9 @@
 
         .tagline {
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: 600; /* Semibold */
             letter-spacing: 3px;
-            color: var(--soma-beige);
+            color: var(--soma-secondary);
             text-transform: uppercase;
             margin-bottom: 15px;
             display: block;
@@ -185,7 +202,7 @@
         /* --- Classes Section (Modern Cards) --- */
         .classes-section {
             padding: 80px 0;
-            background-color: var(--soma-cream);
+            background-color: var(--soma-bg); /* Soft Cream applied here */
         }
 
         .section-heading-title {
@@ -232,9 +249,9 @@
 
         .card-category {
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 600; /* Semibold */
             letter-spacing: 2px;
-            color: var(--soma-beige);
+            color: var(--soma-primary);
             text-transform: uppercase;
             margin-bottom: 10px;
             display: block;
@@ -243,6 +260,7 @@
         .card-title {
             font-size: 1.75rem;
             margin-bottom: 15px;
+            font-weight: 500;
         }
 
         /* --- Tablet & Mobile Queries --- */
@@ -333,17 +351,17 @@
                 <div class="row align-items-center g-4 g-lg-5">
                     <div class="col-lg-6 z-2">
                         <span class="tagline">Welcome to SOMA</span>
-                        <h1 class="hero-title">Find your <i style="color:#BE9676">Soma.</i><br>Find your <i
-                                style="color:#BE9676">Peace.</i></h1>
+                        <h1 class="hero-title">Find your <i style="color: var(--soma-primary);">Soma.</i><br>Find your <i
+                                style="color: var(--soma-primary);">Peace.</i></h1>
                         <p class="lead mb-4 mt-3 text-muted pe-lg-4"
-                            style="font-size: 1.05rem; line-height: 1.8; color:#8D7E71">
+                            style="font-size: 1.05rem; line-height: 1.8; color: var(--soma-secondary) !important;">
                             A premium yoga & pilates wellness studio dedicated to supporting your body, mind and wellbeing.
                             Step into our sanctuary and discover your ultimate potential.
                         </p>
                         <div class="d-flex flex-wrap gap-3">
-                            <a href="#classes" class="btn btn-modern btn-primary-modern">Explore Schedule</a>
+                            <a href="#classes" class="btn btn-modern btn-primary-modern" style="background-color: var(--soma-primary); border-color: var(--soma-primary); color: white;">Explore Schedule</a>
                             <a href="#about" class="btn btn-modern btn-outline-modern border-0 text-decoration-underline"
-                                style="background: transparent;">Discover More</a>
+                                style="background: transparent; color: var(--soma-secondary);">Discover More</a>
                         </div>
                     </div>
                     <div class="col-lg-6 z-1 mt-4 mt-lg-0">
@@ -375,15 +393,15 @@
                     <h2 class="hero-title section-heading-title mb-4">Strengthen the body,
                         <i>awaken</i>, the mind.
                     </h2>
-                    <p class="text-muted mb-4" style="line-height: 1.8; color:#8D7E71">
+                    <p class="text-muted mb-4" style="line-height: 1.8; color: var(--soma-secondary) !important;">
                         At SOMA, we offer a thoughtful fusion of Yoga and Pilates to build physical resilience while
                         fostering inner stillness. Every mindful movement is an invitation to reconnect with yourself.
                     </p>
-                    <p class="text-muted mb-4 mb-lg-5" style="line-height: 1.8; color:#8D7E71">
+                    <p class="text-muted mb-4 mb-lg-5" style="line-height: 1.8; color: var(--soma-secondary) !important;">
                         Whether you are looking to strengthen your core with Pilates or find your grounding flow through
                         Yoga, our space and expert instructors offer the perfect sanctuary for your personal growth.
                     </p>
-                    <a href="#contact" class="btn btn-modern btn-outline-modern">Visit Our Studio</a>
+                    <a href="#contact" class="btn btn-modern btn-outline-modern" style="border-color: var(--soma-primary); color: var(--soma-primary);">Visit Our Studio</a>
                 </div>
             </div>
         </div>
@@ -412,7 +430,7 @@
                                 </div>
                                 <div class="card-body">
                                     <span class="card-category">{{ $workshop->workshop_name }}</span>
-                                    <p class="text-muted mb-0">
+                                    <p class="text-muted mb-0" style="color: var(--soma-secondary) !important;">
                                         {{ !empty(trim($workshop->description))
                         ? Str::limit(strip_tags($workshop->description), 120)
                         : 'At SOMA, we provide the space, the community, and the expert guidance to help you craft a lifestyle that nourishes both your body and mind.' 

@@ -6,7 +6,6 @@ use App\Models\Attendance;
 use App\Models\Booking;
 use App\Models\ClassSchedule;
 use App\Models\Instructor;
-use App\Models\Purchase;
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,17 +23,14 @@ class AttendanceController extends Controller
             $query = Attendance::where('instructor_id', '!=', NULL)->whereNull('client_id');
         }
 
-        // Filter by class_id if provided
         if (!empty($request->class_id)) {
             $query->where('class_id', $request->class_id);
         }
 
-        // Filter by instructor_id if provided
         if (!empty($request->instructor_id)) {
             $query->where('instructor_id', $request->instructor_id);
         }
 
-        // Fetch the filtered attendance records
         $attendances = $query->with(['instructor.user', 'class'])->get();
 
         $events = [];
@@ -60,8 +56,6 @@ class AttendanceController extends Controller
 
         $date = $request->date;
 
-        // Eager load instructor, class, and client (User) relationships
-        // REMOVED 'whereNull('client_id')' to fetch both client and instructor attendance.
         $query = Attendance::with(['instructor.user', 'class', 'client'])
             ->whereDate('attendance_date', $date);
 
@@ -71,24 +65,21 @@ class AttendanceController extends Controller
                 $query->where('instructor_id', $instructor->id);
             }
         } else {
-            // Apply dynamic conditional filter for instructor_id for Admin
             if (!empty($request->instructor_id)) {
                 $query->where('instructor_id', $request->instructor_id);
             }
         }
 
-        // Apply dynamic conditional filter for class_id
         if (!empty($request->class_id)) {
             $query->where('class_id', $request->class_id);
         }
 
-        $attendances = $query->orderBy('client_id')->get(); // Groups Instructors first (null), then clients
+        $attendances = $query->orderBy('client_id')->get();
         $formattedData = [];
 
         foreach ($attendances as $att) {
             $isClient = !is_null($att->client_id);
 
-            // Determine the attendee name and role dynamically
             $personName = $isClient
                 ? ($att->client->name ?? 'Unknown Client')
                 : ($att->instructor->user->name ?? 'Unknown Instructor');
@@ -117,12 +108,29 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $classes = ClassSchedule::with('category')->get();
 
-            $filteredSchedules = $classes->filter(function ($schedule) use ($instructorId) {
-                return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
+            // Fetch IDs of classes where this instructor is a substitute
+            $substitutedClassIds = Attendance::where('instructor_id', $instructorId)
+                ->whereNull('client_id')
+                ->pluck('class_id')
+                ->toArray();
+
+            $filteredSchedules = $classes->filter(function ($schedule) use ($instructorId, $substitutedClassIds) {
+                $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
+                $isAssigned = in_array($instructorId, $assignedIds);
+                $isSubstitute = in_array($schedule->id, $substitutedClassIds);
+
+                return $isAssigned || $isSubstitute;
             });
 
             foreach ($filteredSchedules as $schedule) {
-                $schedule->instructor = Instructor::with('user')->whereIn('id', $schedule->instructor_ids ?? [])->get()->toArray();
+                $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
+
+                // Add current instructor to array if they are a substitute
+                if (in_array($schedule->id, $substitutedClassIds) && !in_array($instructorId, $assignedIds)) {
+                    $assignedIds[] = $instructorId;
+                }
+
+                $schedule->instructor = Instructor::with('user')->whereIn('id', $assignedIds)->get()->toArray();
             }
         } else {
             $classes = ClassSchedule::get();
@@ -139,60 +147,97 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $att = ClassSchedule::with('category')->get();
 
-            $filteredSchedules = $att->filter(function ($schedule) use ($instructorId) {
-                return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
+            // Find classes where instructor is a substitute
+            $substitutedClassIds = Attendance::where('instructor_id', $instructorId)
+                ->whereNull('client_id')
+                ->pluck('class_id')
+                ->toArray();
+
+            $filteredSchedules = $att->filter(function ($schedule) use ($instructorId, $substitutedClassIds) {
+                $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
+                $isAssigned = in_array($instructorId, $assignedIds);
+                $isSubstitute = in_array($schedule->id, $substitutedClassIds);
+
+                return $isAssigned || $isSubstitute;
             });
 
-            $allInstructorIds = $filteredSchedules->pluck('instructor_ids')->flatten()->unique()->toArray();
+            // Gather all relevant instructor IDs and Schedule IDs for fetching attendances
+            $allInstructorIds = $filteredSchedules->pluck('instructor_ids')->map(function ($ids) {
+                return is_array($ids) ? $ids : json_decode($ids, true) ?? [];
+            })->flatten()->unique()->toArray();
+
+            // Ensure substitute instructor ID is also included in query
+            if (!in_array($instructorId, $allInstructorIds)) {
+                $allInstructorIds[] = $instructorId;
+            }
+
             $allScheduleIds = $filteredSchedules->pluck('id')->toArray();
 
             $allAttendances = Attendance::whereIn('instructor_id', $allInstructorIds)
                 ->whereIn('class_id', $allScheduleIds)
-                ->whereDate('attendance_date', now()->format('Y-m-d'))
+                ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
                 ->get()
                 ->groupBy(function ($item) {
                     return $item->instructor_id . '_' . $item->class_id;
                 });
 
             foreach ($filteredSchedules as $schedule) {
+                $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
+
+                if (in_array($schedule->id, $substitutedClassIds) && !in_array($instructorId, $assignedIds)) {
+                    $assignedIds[] = $instructorId; // Include substitute instructor manually
+                }
+
                 $schedule->instructor = Instructor::with('user')
-                    ->whereIn('id', $schedule->instructor_ids ?? [])
+                    ->whereIn('id', $assignedIds)
                     ->get();
 
-                foreach ($schedule->instructor as $instructor) {
-                    $key = $instructor->id . '_' . $schedule->id;
+                foreach ($schedule->instructor as $inst) {
+                    $key = $inst->id . '_' . $schedule->id;
                     $attendanceModel = $allAttendances->get($key)?->first();
-                    $instructor->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
+                    $inst->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
                 }
                 $schedule->setRelation('instructor', $schedule->instructor);
             }
             $att = $filteredSchedules;
         } else {
+            // For Admin Role
             $att = ClassSchedule::with('category')->latest()->get();
-            $allInstructorIds = $att->pluck('instructor_ids')->flatten()->unique()->toArray();
             $allScheduleIds = $att->pluck('id')->toArray();
 
-            $allAttendances = Attendance::whereIn('instructor_id', $allInstructorIds)
-                ->whereIn('class_id', $allScheduleIds)
-                ->whereDate('attendance_date', now()->format('Y-m-d'))
-                ->get()
-                ->groupBy(function ($item) {
-                    return $item->instructor_id . '_' . $item->class_id;
-                });
+            // Fetch today's instructor attendances to identify substitutes
+            $todayAttendances = Attendance::whereIn('class_id', $allScheduleIds)
+                ->whereNull('client_id')
+                ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
+                ->get();
+
+            $allInstructorIds = $att->pluck('instructor_ids')->map(function ($ids) {
+                return is_array($ids) ? $ids : json_decode($ids, true) ?? [];
+            })->flatten()->merge($todayAttendances->pluck('instructor_id'))->unique()->toArray();
+
+            $allAttendances = $todayAttendances->groupBy(function ($item) {
+                return $item->instructor_id . '_' . $item->class_id;
+            });
 
             foreach ($att as $schedule) {
+                $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
+                $substituteIds = $todayAttendances->where('class_id', $schedule->id)->pluck('instructor_id')->toArray();
+
+                $combinedIds = array_unique(array_merge($assignedIds, $substituteIds));
+
                 $schedule->instructor = Instructor::with('user')
-                    ->whereIn('id', $schedule->instructor_ids ?? [])
+                    ->whereIn('id', $combinedIds)
                     ->get();
 
-                foreach ($schedule->instructor as $instructor) {
-                    $key = $instructor->id . '_' . $schedule->id;
+                foreach ($schedule->instructor as $inst) {
+                    $key = $inst->id . '_' . $schedule->id;
                     $attendanceModel = $allAttendances->get($key)?->first();
-                    $instructor->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
+                    $inst->attendance = $attendanceModel ? $attendanceModel->toArray() : null;
                 }
                 $schedule->setRelation('instructor', $schedule->instructor);
             }
         }
+
         $record = Attendance::get();
         return view('backends.attendance.attendance', compact('att', 'record'));
     }
@@ -275,13 +320,12 @@ class AttendanceController extends Controller
 
             $inst = Attendance::where('class_id', $classId)
                 ->where('attendance_date', $attendanceDate)
-                ->where('admin_approve', true)
                 ->where('instructor_id', $instructorModel?->id)
                 ->whereNull('client_id')
                 ->exists();
 
             if (!$inst) {
-                $msg = 'You have not checked in for this class yet or are waiting for Admin Approval!';
+                $msg = 'You must check-in yourself as an instructor first before checking in clients!';
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json(['message' => $msg], 422);
                 }
@@ -291,13 +335,12 @@ class AttendanceController extends Controller
 
         $checkedInTeachers = Attendance::where('class_id', $classId)
             ->where('attendance_date', $attendanceDate)
-            ->where('admin_approve', true)
             ->whereNotNull('instructor_id')
             ->whereNull('client_id')
             ->get();
 
         if ($checkedInTeachers->isEmpty()) {
-            $msg = 'No instructors have checked in for this class yet or waiting for Admin Approval!';
+            $msg = 'At least one instructor must check-in for this class first!';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
             }
@@ -356,7 +399,7 @@ class AttendanceController extends Controller
             }
         }
 
-        $successMsg = 'Client Attendance recorded and category fee rates applied!';
+        $successMsg = 'Client Attendance checked in successfully!';
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -419,7 +462,7 @@ class AttendanceController extends Controller
 
         $attendance = Attendance::where('instructor_id', $instructorId)
             ->where('class_id', $request->class_id)
-            ->whereDate('attendance_date', now()->format('Y-m-d'))
+            ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
             ->first();
 
         if (!$attendance) {
@@ -429,9 +472,41 @@ class AttendanceController extends Controller
         $attendance->admin_approve = true;
         $attendance->save();
 
-        ClassSchedule::where('id', $request->class_id)->update(['status' => 'completed']);
+        return back()->with('success', 'Instructor Class Completion approved by admin.');
+    }
 
-        return back()->with('success', 'Instructor attendance approved by admin.');
+    public function cancelAdminApprove(Request $request, $instructorId)
+    {
+        $attendance = Attendance::where('instructor_id', $instructorId)
+            ->where('class_id', $request->class_id)
+            ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
+            ->first();
+
+        if ($attendance) {
+            $attendance->admin_approve = false;
+            $attendance->save();
+
+            return back()->with('success', 'Instructor Class Completion Approval cancelled.');
+        }
+        return back()->with('error', 'Attendance record not found.');
+    }
+
+    public function classApprove(Request $request, $classId)
+    {
+        Attendance::where('class_id', $classId)
+            ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
+            ->update(['class_approve' => true]);
+
+        return back()->with('success', 'Class Attendance has been successfully approved!');
+    }
+
+    public function cancelClassApprove(Request $request, $classId)
+    {
+        Attendance::where('class_id', $classId)
+            ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
+            ->update(['class_approve' => false]);
+
+        return back()->with('success', 'Class Attendance Approval has been cancelled!');
     }
 
     public function outTime(Request $request)

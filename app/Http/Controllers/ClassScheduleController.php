@@ -17,10 +17,13 @@ use Carbon\Carbon;
 
 class ClassScheduleController extends Controller
 {
+    // ==========================================
+    // BACKEND METHODS (Admin & Instructor)
+    // ==========================================
+
     public function index()
     {
         if (auth()->user()->hasRole("Instructor")) {
-
             $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
             $instructorId = (string) $instructor->id;
             $schedules = ClassSchedule::with('category')->get();
@@ -215,13 +218,11 @@ class ClassScheduleController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        // Optimized Attendance Fetching (No date restriction so we can group by date in frontend)
         $scheduleIds = $schedules->pluck('id')->toArray();
         $attendances = Attendance::with(['instructor.user'])
             ->whereIn('class_id', $scheduleIds)
             ->get();
 
-        // Pre-fetch all clients to avoid N+1 queries when loading user names
         $clientIds = $attendances->whereNotNull('client_id')->pluck('client_id')->unique();
         $clients = User::whereIn('id', $clientIds)->get()->keyBy('id');
 
@@ -230,7 +231,6 @@ class ClassScheduleController extends Controller
                 ->whereIn('id', $schedule->instructor_ids ?? [])
                 ->get();
 
-            // REMOVED STRICT DATE RESTRICTION HERE to show all attended students in modal
             $scheduleAttendances = $attendances->where('class_id', $schedule->id);
 
             foreach ($scheduleAttendances as $att) {
@@ -264,7 +264,7 @@ class ClassScheduleController extends Controller
     {
         $classId = $request->class_id;
         $userId = $request->input('user_id', auth()->id());
-        $bookingDatesStr = $request->input('booking_dates'); // Format: "2023-10-01, 2023-10-08"
+        $bookingDatesStr = $request->input('booking_dates');
 
         if (!$classId) {
             return redirect()->back()->with('warning', 'Invalid class selected.');
@@ -279,7 +279,6 @@ class ClassScheduleController extends Controller
             return redirect()->back()->with('warning', 'Class not found.');
         }
 
-        // Parse booking dates into an array
         $bookingDates = explode(', ', $bookingDatesStr);
         $bookingDates = array_map('trim', $bookingDates);
         $totalRequestedClasses = count($bookingDates);
@@ -297,7 +296,7 @@ class ClassScheduleController extends Controller
         })
             ->where('registered_id', $userId)
             ->where('pay_status', 'confirmed')
-            ->where('class_remaining', '>=', $totalRequestedClasses) // Check if remaining covers all selected dates
+            ->where('class_remaining', '>=', $totalRequestedClasses)
             ->where('expires_at', '>=', now())
             ->where(function ($query) {
                 $query->whereRaw('class_remaining = (SELECT class_count FROM packages WHERE id = purchases.selected_packages_id)')
@@ -319,18 +318,16 @@ class ClassScheduleController extends Controller
         return DB::transaction(function () use ($class, $activePurchase, $userId, $bookingDates, $classCapacity, &$waitlistedCount, &$confirmedCount) {
 
             foreach ($bookingDates as $date) {
-                // Check if already booked for this specific DATE
                 $existingBooking = Booking::where('registered_id', $userId)
                     ->where('selected_class_id', $class->id)
-                    ->where('booked_date', $date) // Requires `booked_date` column in DB
+                    ->where('booked_date', $date)
                     ->whereIn('status', ['confirmed', 'waitlisted'])
                     ->first();
 
                 if ($existingBooking) {
-                    continue; // Skip if already booked on this day
+                    continue;
                 }
 
-                // Check capacity per DATE
                 $bookedCount = Booking::where('selected_class_id', $class->id)
                     ->where('booked_date', $date)
                     ->where('status', 'confirmed')
@@ -340,7 +337,7 @@ class ClassScheduleController extends Controller
                 $booking->package_id = $activePurchase->selected_packages_id;
                 $booking->registered_id = $userId;
                 $booking->selected_class_id = $class->id;
-                $booking->booked_date = $date; // Save the specific selected date
+                $booking->booked_date = $date;
 
                 if ($bookedCount >= $classCapacity) {
                     $booking->status = 'waitlisted';
@@ -355,10 +352,7 @@ class ClassScheduleController extends Controller
             }
 
             if ($waitlistedCount > 0 && $confirmedCount == 0) {
-                // Send Waitlist Notification logic...
                 $user = User::find($userId);
-                // ... setup notification code as before ...
-
                 return redirect()->back()->with('warning', 'Classes were full on selected dates. Added to waitlist.');
             }
 
@@ -378,16 +372,6 @@ class ClassScheduleController extends Controller
 
         if (!$userId) {
             return response()->json(['status' => false, 'message' => 'User ID is required.'], 400);
-        }
-
-        $existingBooking = Booking::where('registered_id', $userId)
-            ->where('selected_class_id', $class->id)
-            ->whereIn('status', ['confirmed', 'waitlisted'])
-            ->first();
-
-        if ($existingBooking) {
-            $statusMsg = $existingBooking->status === 'confirmed' ? 'already joined' : 'already on the waitlist for';
-            return redirect()->back()->with('warning', "User has {$statusMsg} this class.");
         }
 
         $activePurchase = Purchase::whereHas('package', function ($query) use ($class) {
@@ -421,5 +405,74 @@ class ClassScheduleController extends Controller
                 'capacity' => $class->capacity ?? 0
             ]
         ]);
+    }
+
+    // ==========================================
+    // FRONTEND METHODS (Students / Public View)
+    // ==========================================
+
+    public function frontendClasses(Request $request)
+    {
+        $query = ClassSchedule::with(['category', 'instructor.user'])
+            ->where(function ($q) {
+                // အဓိက အချက်: end_date က ယနေ့ (သို့) နောင်လာမည့်ရက် ဖြစ်နေသမျှ 
+                // Admin Approve လို့ status က completed ဖြစ်သွားရင်တောင် List ထဲမှာ ဆက်ပါလာစေရမည်။
+                $q->whereDate('end_date', '>=', Carbon::today('Asia/Yangon'))
+                    ->orWhere(function ($subQ) {
+                        $subQ->whereNull('end_date')
+                            ->whereDate('start_date', '>=', Carbon::today('Asia/Yangon'));
+                    });
+            })
+            // Cancel လုပ်ထားတဲ့ အတန်းတွေမှလွဲပြီး ကျန်တဲ့ အတန်းတွေပါ အကုန်ပြမယ်
+            ->where('status', '!=', 'cancelled');
+
+        // Search Filters
+        if ($request->filled('search')) {
+            $query->where('class_name', 'like', '%' . $request->search . '%');
+        }
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+        if ($request->filled('instructor')) {
+            $query->where('instructor_ids', 'like', '%' . $request->instructor . '%');
+        }
+        if ($request->filled('from_date')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('end_date', '>=', $request->from_date)
+                    ->orWhere(function ($subQ) use ($request) {
+                        $subQ->whereNull('end_date')
+                            ->whereDate('start_date', '>=', $request->from_date);
+                    });
+            });
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('start_date', '<=', $request->to_date);
+        }
+
+        $classes = $query->latest()->paginate(10);
+
+        foreach ($classes as $class) {
+            $class->instructor = Instructor::with('user')->whereIn('id', $class->instructor_ids ?? [])->get()->toArray();
+        }
+
+        $categories = Category::all();
+        $instructors = Instructor::with('user')->get();
+        $bookingsAll = Booking::all();
+
+        $bookings = collect();
+        if (Auth::check()) {
+            $bookings = Booking::where('registered_id', auth()->id())->get();
+        }
+
+        $allImages = [];
+
+        return view('frontend.classes.index', compact(
+            'classes',
+            'categories',
+            'instructors',
+            'bookingsAll',
+            'bookings',
+            'allImages'
+        ));
     }
 }

@@ -2,12 +2,27 @@
 
 @section('content')
 
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
+        /* --- Brand Variables & Fonts --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+        }
+
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
         body {
-            background: #f8fafc;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--soma-bg) !important;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -16,17 +31,22 @@
         }
 
         .page-title {
-            color: #0f172a;
+            color: var(--soma-secondary);
             font-size: 24px;
             font-weight: 800;
             letter-spacing: -0.5px;
             margin-bottom: 4px;
         }
 
+        /* Override Bootstrap text-primary to match brand */
+        .text-primary {
+            color: var(--soma-primary) !important;
+        }
+
         /* --- Modern Premium Tab Switcher --- */
         .tabs-wrapper {
             display: flex;
-            background: #e2e8f0;
+            background: rgba(141, 126, 113, 0.15); /* Tint of Desert Taupe */
             padding: 4px;
             border-radius: 12px;
             max-width: 320px;
@@ -41,7 +61,7 @@
             padding: 10px 16px;
             font-size: 14px;
             font-weight: 600;
-            color: #64748b;
+            color: var(--soma-secondary);
             cursor: pointer;
             border-radius: 9px;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -57,9 +77,9 @@
         }
 
         .tab-btn.active {
-            color: #0f172a;
-            background: #ffffff;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+            color: #ffffff;
+            background: var(--soma-secondary);
+            box-shadow: 0 4px 10px rgba(141, 126, 113, 0.2);
         }
 
         /* Sticky Modern Search Bar Container */
@@ -68,7 +88,7 @@
             top: 12px;
             z-index: 100;
             margin-bottom: 24px;
-            background: rgba(248, 250, 252, 0.8);
+            background: rgba(255, 247, 233, 0.8); /* Soft Cream transparent */
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             padding: 4px 0;
@@ -86,24 +106,24 @@
             padding: 14px 44px;
             font-size: 15px;
             background: #ffffff;
-            border: 1px solid #e2e8f0;
+            border: 1px solid rgba(141, 126, 113, 0.3);
             border-radius: 14px;
-            color: #1e293b;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+            color: var(--soma-secondary);
+            box-shadow: 0 4px 10px rgba(141, 126, 113, 0.03);
             transition: all 0.2s ease;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: var(--soma-taupe, #706e6b);
-            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+            border-color: var(--soma-primary);
+            box-shadow: 0 10px 15px -3px rgba(190, 150, 118, 0.15);
             background: #ffffff;
         }
 
         .search-icon-left {
             position: absolute;
             left: 16px;
-            color: #94a3b8;
+            color: rgba(141, 126, 113, 0.6);
             font-size: 16px;
             pointer-events: none;
         }
@@ -111,7 +131,7 @@
         .clear-search-btn {
             position: absolute;
             right: 14px;
-            background: #f1f5f9;
+            background: rgba(141, 126, 113, 0.1);
             border: none;
             border-radius: 50%;
             width: 24px;
@@ -119,9 +139,23 @@
             display: none;
             align-items: center;
             justify-content: center;
-            color: #64748b;
+            color: var(--soma-secondary);
             cursor: pointer;
             padding: 0;
+        }
+        
+        /* Ensure Empty State matches the brand */
+        .empty-state {
+            background: #ffffff;
+            padding: 40px 24px;
+            border-radius: 16px;
+            border: 1px dashed rgba(141, 126, 113, 0.3);
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .empty-state .text-dark {
+            color: var(--soma-secondary) !important;
         }
     </style>
 

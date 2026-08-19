@@ -1,4 +1,72 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<!-- Added Google Fonts for Fahkwang -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    /* --- Brand Variables & Fonts --- */
+    :root {
+        --soma-primary: #BE9676; /* Perfect Beige */
+        --soma-secondary: #8D7E71; /* Desert Taupe */
+        --soma-bg: #FFF7E9; /* Soft Cream */
+    }
+
+    .soma-navigation, .soma-navigation * {
+        font-family: 'Fahkwang', sans-serif !important;
+    }
+
+    /* Apply Brand Background and Border */
+    .soma-navigation {
+        background-color: var(--soma-bg) !important;
+        border-bottom: 1px solid rgba(141, 126, 113, 0.2) !important;
+    }
+
+    /* Override Tailwind gray colors to match Soma brand */
+    .soma-navigation .text-gray-800,
+    .soma-navigation .text-gray-700 {
+        color: var(--soma-secondary) !important;
+    }
+
+    .soma-navigation .text-gray-500,
+    .soma-navigation .text-gray-400 {
+        color: rgba(141, 126, 113, 0.8) !important;
+    }
+
+    .soma-navigation .bg-white {
+        background-color: transparent !important; /* Allow Soft Cream to show through */
+    }
+
+    .soma-navigation .hover\:text-gray-700:hover,
+    .soma-navigation .hover\:text-gray-500:hover {
+        color: var(--soma-primary) !important;
+    }
+
+    .soma-navigation .hover\:bg-gray-100:hover,
+    .soma-navigation .focus\:bg-gray-100:focus {
+        background-color: rgba(190, 150, 118, 0.1) !important;
+    }
+
+    .soma-navigation .border-gray-200 {
+        border-color: rgba(141, 126, 113, 0.2) !important;
+    }
+
+    /* Override default Laravel Breeze Indigo active states */
+    .soma-navigation .border-indigo-400,
+    .soma-navigation .border-indigo-500 {
+        border-color: var(--soma-primary) !important;
+    }
+    
+    .soma-navigation .text-indigo-700,
+    .soma-navigation .text-indigo-600 {
+        color: var(--soma-secondary) !important;
+    }
+
+    .soma-navigation .bg-indigo-50 {
+        background-color: rgba(190, 150, 118, 0.1) !important;
+    }
+</style>
+
+<nav x-data="{ open: false }" class="soma-navigation bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">

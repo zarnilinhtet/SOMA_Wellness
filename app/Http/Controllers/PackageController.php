@@ -83,7 +83,7 @@ class PackageController extends Controller
             'user_id' => 'required',
             'package_id' => 'required',
             'account_name' => 'required|string',
-            'phone_no' => 'required',
+            // 'phone_no' => 'required',
             'price' => 'required',
             'payment_id' => 'required',
             'user_discount' => 'required',

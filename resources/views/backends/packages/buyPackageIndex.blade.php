@@ -138,8 +138,8 @@
 
                     {{-- CLIENT PHONE NUMBER --}}
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">Client Phone Number <span class="text-danger">*</span></label>
-                        <input type="number" value="{{ old('phone_no') }}" name="phone_no" class="form-control dynamic-field @error('phone_no') is-invalid @enderror" placeholder="Client Phone Number" {{ old('payment_id') ? '' : 'disabled' }} required>
+                        <label class="form-label fw-bold">Client Phone Number </label>
+                        <input type="number" value="{{ old('phone_no') }}" name="phone_no" class="form-control dynamic-field @error('phone_no') is-invalid @enderror" placeholder="Client Phone Number" {{ old('payment_id') ? '' : 'disabled' }} >
                         @error('phone_no')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

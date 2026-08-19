@@ -3,21 +3,36 @@
 @section('content')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --soma-cream: #fbf9f6;
-            --soma-taupe: #be9676;
-            --beige: #be9676;
-            --dark: #2d2a26;
+            /* --- Brand Variables --- */
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+
+            /* --- Mapped Aliases --- */
+            --soma-cream: var(--soma-bg);
+            --soma-taupe: var(--soma-secondary);
+            --beige: var(--soma-primary);
+            --dark: var(--soma-secondary);
             --white: #ffffff;
             --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(110, 92, 82, 0.12);
+            --glass-border: rgba(141, 126, 113, 0.12); /* Desert Taupe RGB */
+        }
+
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+            font-family: 'Fahkwang', sans-serif !important;
         }
 
         body {
             background: linear-gradient(135deg, var(--soma-cream) 0%, #ffffff 100%);
-            font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
             min-height: 100vh;
             color: var(--dark);
         }
@@ -41,14 +56,14 @@
             -webkit-backdrop-filter: blur(20px);
             border-radius: 24px;
             border: 1px solid var(--glass-border);
-            box-shadow: 0 20px 40px rgba(110, 92, 82, 0.06);
+            box-shadow: 0 20px 40px rgba(141, 126, 113, 0.06);
             overflow: hidden;
         }
 
         /* Left Sidebar: Sticky & Scroll-Optimized */
         .gateway-sidebar {
             background: rgba(255, 255, 255, 0.4);
-            border-right: 1px solid rgba(110, 92, 82, 0.08);
+            border-right: 1px solid rgba(141, 126, 113, 0.08);
             padding: 20px;
         }
 
@@ -67,7 +82,7 @@
             width: 100%;
             height: 48px;
             border-radius: 14px;
-            border: 1px solid rgba(110, 92, 82, 0.15);
+            border: 1px solid rgba(141, 126, 113, 0.15);
             padding: 0 15px 0 45px;
             font-size: 14px;
             background: var(--white);
@@ -85,7 +100,8 @@
             left: 18px;
             top: 50%;
             transform: translateY(-50%);
-            color: #a0948d;
+            color: var(--soma-secondary);
+            opacity: 0.6;
             font-size: 14px;
         }
 
@@ -111,7 +127,7 @@
         }
 
         .gateway-list::-webkit-scrollbar-thumb {
-            background: rgba(110, 92, 82, 0.2);
+            background: rgba(141, 126, 113, 0.2);
             border-radius: 10px;
         }
 
@@ -122,7 +138,7 @@
             justify-content: space-between;
             padding: 14px 16px;
             background: var(--white);
-            border: 1px solid rgba(224, 212, 202, 0.5);
+            border: 1px solid rgba(190, 150, 118, 0.2);
             border-radius: 14px;
             margin-bottom: 10px;
             cursor: pointer;
@@ -136,7 +152,7 @@
         }
 
         .compact-method-row.active {
-            background: linear-gradient(90deg, #fffcf7, #fff6ee);
+            background: var(--soma-bg);
             border-color: var(--beige);
             box-shadow: 0 6px 18px rgba(190, 150, 118, 0.14);
         }
@@ -145,7 +161,7 @@
             width: 38px;
             height: 38px;
             border-radius: 10px;
-            background: #f7f3ee;
+            background: rgba(190, 150, 118, 0.1);
             color: var(--beige);
             display: flex;
             align-items: center;
@@ -170,7 +186,7 @@
             height: 10px;
             border-radius: 50%;
             background: transparent;
-            border: 2px solid #dfd9d3;
+            border: 2px solid rgba(141, 126, 113, 0.3);
             transition: all 0.25s;
         }
 
@@ -195,7 +211,7 @@
             width: 100%;
             height: 50px;
             border-radius: 12px;
-            border: 1px solid rgba(110, 92, 82, 0.18);
+            border: 1px solid rgba(141, 126, 113, 0.18);
             padding: 10px 14px;
             font-size: 14px;
             background: var(--white);
@@ -210,11 +226,11 @@
 
         /* Premium Digital Split Receipt & QR System Frame */
         .digital-receipt-card {
-            background: linear-gradient(145deg, #24211e, #36322e);
+            background: linear-gradient(145deg, var(--soma-secondary), #7a6a5d); /* Replaced with brand colors */
             color: var(--white);
             border-radius: 20px;
             padding: 20px;
-            box-shadow: 0 15px 35px rgba(45, 42, 38, 0.18);
+            box-shadow: 0 15px 35px rgba(141, 126, 113, 0.18);
             position: relative;
         }
 
@@ -242,7 +258,7 @@
 
         .qr-display-container:hover {
             background: rgba(255, 255, 255, 0.1);
-            border-color: var(--beige);
+            border-color: var(--soma-bg);
         }
 
         .qr-display-container img {
@@ -276,7 +292,7 @@
         }
 
         .btn-verify {
-            background: linear-gradient(135deg, var(--beige), #a87e5c);
+            background: linear-gradient(135deg, var(--soma-primary), var(--soma-secondary));
             border: none;
             height: 52px;
             border-radius: 12px;
@@ -304,7 +320,8 @@
             align-items: center;
             gap: 6px;
             font-size: 14px;
-            color: #8c8179;
+            color: var(--soma-secondary);
+            opacity: 0.8;
             cursor: pointer;
             transition: all 0.2s ease;
             font-weight: 600;
@@ -312,6 +329,7 @@
 
         .back-btn:hover {
             color: var(--dark);
+            opacity: 1;
             transform: translateX(-2px);
         }
 
@@ -330,7 +348,7 @@
             border-radius: 12px;
             font-size: 13px;
             z-index: 1050;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 30px rgba(141, 126, 113, 0.2);
             display: none;
         }
 
@@ -347,11 +365,11 @@
             border-radius: 20px;
             border: none;
             background: var(--soma-cream);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 20px 50px rgba(141, 126, 113, 0.15);
         }
 
         .policy-modal-header {
-            border-bottom: 1px solid rgba(110, 92, 82, 0.1);
+            border-bottom: 1px solid rgba(141, 126, 113, 0.1);
             padding: 20px 24px;
         }
 
@@ -361,14 +379,14 @@
             overflow-y: auto;
             font-size: 14px;
             line-height: 1.6;
-            color: #555555;
+            color: var(--soma-secondary);
         }
 
         /* Responsive Breakpoints Rules Configuration */
         @media (max-width: 991px) {
             .gateway-sidebar {
                 border-right: none;
-                border-bottom: 1px solid rgba(110, 92, 82, 0.1);
+                border-bottom: 1px solid rgba(141, 126, 113, 0.1);
             }
         }
 
@@ -383,13 +401,13 @@
         }
 
         .btn-accept:hover {
-            background: #a87e5c;
+            background: var(--soma-secondary);
             color: white;
         }
 
         .btn-decline {
             background: #e5e5e5;
-            color: #666;
+            color: var(--soma-secondary);
             border: none;
             border-radius: 12px;
             padding: 10px 24px;
@@ -528,7 +546,7 @@
                                 {{-- Header --}}
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="text-uppercase tracking-wider fw-bold mb-0"
-                                        style="font-size: 11px; color: var(--beige, #c5a059);">
+                                        style="font-size: 11px; color: var(--beige);">
                                         Verification Form
                                     </h6>
                                     <span class="text-danger" style="font-size: 11px;">* required</span>
@@ -550,9 +568,9 @@
                                 {{-- Sender Phone --}}
                                 <div class="mb-3">
                                     <label class="form-label text-secondary small fw-semibold mb-1" for="formPhone">
-                                        Your Mobile Line <span class="text-danger fs-6">*</span>
+                                        Phone Number 
                                     </label>
-                                    <input type="text" id="formPhone" name="sender_phone" required
+                                    <input type="text" id="formPhone" name="sender_phone" 
                                         class="form-control premium-input @error('sender_phone') is-invalid @enderror"
                                         placeholder="09xxxxxxxx">
                                     @error('sender_phone')
@@ -640,7 +658,7 @@
                                         <span>
                                             You must accept our Payment Policy terms to complete this transaction.
                                             <a href="#" data-bs-toggle="modal" data-bs-target="#paymentPolicyModal"
-                                                class="fw-bold text-decoration-underline" style="color: var(--beige, #c5a059);">
+                                                class="fw-bold text-decoration-underline" style="color: var(--beige);">
                                                 Review Terms
                                             </a>
                                         </span>
@@ -664,7 +682,7 @@
                                     <div class="border-bottom border-secondary pb-3 mb-3">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="fs-5" style="color: var(--soma-taupe)" id="recIcon">
+                                                <div class="fs-5" style="color: var(--soma-bg)" id="recIcon">
                                                     <i class="fa-solid fa-money-bill-wave"></i>
                                                 </div>
                                                 <h6 class="m-0 fw-bold">Target Gate</h6>
@@ -699,8 +717,8 @@
 
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <div class="fw-semibold">Total</div>
-                                            <div class="badge bg-primary text-white fw-bold px-2 py-2" id="recTotalDisplay"
-                                                style="font-size: 14px;">
+                                            <div class="badge text-white fw-bold px-2 py-2" id="recTotalDisplay"
+                                                style="font-size: 14px; background-color: var(--soma-primary);">
                                                 {{ number_format($finalTotal) }} K
                                             </div>
                                         </div>

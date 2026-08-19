@@ -1,277 +1,293 @@
-<style>
-/* ================= INDEPENDENT 2-COLUMN LAYOUT ================= */
-.purchase-columns-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-}
+@if($tab === 'rates')
+    {{-- Google Fonts for Fahkwang (Included if not already in layouts.link, ensuring it works here) --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-@media (min-width: 992px) {
-    .purchase-columns-wrapper {
-        display: flex;
-        flex-direction: row;
-        align-items: flex-start; 
-        gap: 16px;
+    <style>
+    /* ================= BRAND VARIABLES & FONTS ================= */
+    :root {
+        --soma-primary: #BE9676; /* Perfect Beige */
+        --soma-secondary: #8D7E71; /* Desert Taupe */
+        --soma-bg: #FFF7E9; /* Soft Cream */
     }
 
-    .purchase-column {
-        flex: 1; 
+    body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+        font-family: 'Fahkwang', sans-serif !important;
+    }
+
+    /* ================= INDEPENDENT 2-COLUMN LAYOUT ================= */
+    .purchase-columns-wrapper {
         display: flex;
         flex-direction: column;
         gap: 16px;
-        min-width: 0; 
+        width: 100%;
     }
-}
 
-.purchase-column {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-}
+    @media (min-width: 992px) {
+        .purchase-columns-wrapper {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start; 
+            gap: 16px;
+        }
 
-.purchase-item-container {
-    width: 100%;
-    box-sizing: border-box;
-}
+        .purchase-column {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0; 
+        }
+    }
 
-.purchase-empty-full-width {
-    width: 100%;
-}
+    .purchase-column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+    }
 
-/* ================= COLLAPSIBLE PURCHASE CARDS ================= */
-.purchase-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.25s ease,
-                border-color 0.2s ease;
-    cursor: pointer;
-    overflow: hidden;
-    width: 100%;
-    box-sizing: border-box;
-}
+    .purchase-item-container {
+        width: 100%;
+        box-sizing: border-box;
+    }
 
-.purchase-card:active {
-    transform: scale(0.99);
-    background: #f8fafc;
-}
+    .purchase-empty-full-width {
+        width: 100%;
+    }
 
-.card-trigger-header {
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-}
+    /* ================= COLLAPSIBLE PURCHASE CARDS ================= */
+    .purchase-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.25s ease,
+                    border-color 0.2s ease;
+        cursor: pointer;
+        overflow: hidden;
+        width: 100%;
+        box-sizing: border-box;
+    }
 
-.header-left-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+    .purchase-card:active {
+        transform: scale(0.99);
+        background: #f8fafc;
+    }
 
-.header-right-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
+    .card-trigger-header {
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+    }
 
-.package-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 2px;
-}
+    .header-left-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
-.meta-date {
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: 500;
-}
+    .header-right-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
 
-.badge-status {
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
+    .package-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--soma-secondary); /* Updated to Brand Color */
+        margin-bottom: 2px;
+    }
 
-.badge-status.pending {
-    background: #fffbeb;
-    color: #b45309;
-}
+    .meta-date {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 500;
+    }
 
-.badge-status.approved {
-    background: #f0fdf4;
-    color: #15803d;
-}
+    .badge-status {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
 
-.badge-status.rejected {
-    background: #fee2e2;
-    color: #b91c1c;
-}
+    .badge-status.pending {
+        background: #fffbeb;
+        color: #b45309;
+    }
 
-.chevron-icon {
-    color: #94a3b8;
-    transition: transform 0.25s ease;
-    font-size: 13px;
-    margin-left: 10px;
-}
+    .badge-status.approved {
+        background: #f0fdf4;
+        color: #15803d;
+    }
 
-/* Collapsible Drawer */
-.card-details-collapsible {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    visibility: hidden;
-    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, visibility 0.25s;
-    background: #fafafa;
-    border-top: 1px solid transparent;
-}
+    .badge-status.rejected {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
 
-/* Expanded Card States */
-.purchase-card.is-expanded {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    border-color: #cbd5e1;
-}
+    .chevron-icon {
+        color: var(--soma-secondary); /* Updated to Brand Color */
+        transition: transform 0.25s ease;
+        font-size: 13px;
+        margin-left: 10px;
+    }
 
-.purchase-card.is-expanded .card-details-collapsible {
-    max-height: 600px;
-    opacity: 1;
-    visibility: visible;
-    border-top-color: #f1f5f9;
-}
+    /* Collapsible Drawer */
+    .card-details-collapsible {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        visibility: hidden;
+        transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, visibility 0.25s;
+        background: #fafafa;
+        border-top: 1px solid transparent;
+    }
 
-.purchase-card.is-expanded .chevron-icon {
-    transform: rotate(180deg);
-    color: #0f172a;
-}
+    /* Expanded Card States */
+    .purchase-card.is-expanded {
+        box-shadow: 0 10px 15px -3px rgba(141, 126, 113, 0.1); /* Updated Shadow Color */
+        border-color: rgba(190, 150, 118, 0.4); /* Updated Border Color */
+    }
 
-.details-body {
-    padding: 16px;
-}
+    .purchase-card.is-expanded .card-details-collapsible {
+        max-height: 600px;
+        opacity: 1;
+        visibility: visible;
+        border-top-color: #f1f5f9;
+    }
 
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px 12px;
-}
+    .purchase-card.is-expanded .chevron-icon {
+        transform: rotate(180deg);
+        color: var(--soma-primary); /* Updated to Brand Color */
+    }
 
-.info-block {
-    display: flex;
-    flex-direction: column;
-}
+    .details-body {
+        padding: 16px;
+    }
 
-.label {
-    font-size: 11px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-    font-weight: 600;
-}
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px 12px;
+    }
 
-.value {
-    font-size: 13px;
-    font-weight: 600;
-    color: #334155;
-    word-break: break-all;
-}
+    .info-block {
+        display: flex;
+        flex-direction: column;
+    }
 
-/* UPDATED: Cancel Alert Box Color */
-.rejection-reason-box {
-    background: #FFF7E9; 
-    border-left: 3px solid #f59e0b; 
-    padding: 12px 14px;
-    border-radius: 4px;
-    margin-top: 12px;
-}
+    .label {
+        font-size: 11px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+        font-weight: 600;
+    }
 
-.rejection-label {
-    font-size: 11px;
-    color: #d97706; 
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    font-weight: 700;
-}
+    .value {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--soma-secondary); /* Updated to Brand Color */
+        word-break: break-all;
+    }
 
-.empty-state {
-    background: #ffffff;
-    padding: 40px 24px;
-    border-radius: 16px;
-    border: 1px dashed #cbd5e1;
-    text-align: center;
-    margin-top: 10px;
-}
+    /* UPDATED: Cancel Alert Box Color */
+    .rejection-reason-box {
+        background: var(--soma-bg); /* Updated to Brand Background */
+        border-left: 3px solid var(--soma-primary); /* Updated to Brand Primary */
+        padding: 12px 14px;
+        border-radius: 4px;
+        margin-top: 12px;
+    }
 
-/* Pagination */
-.soma-pagination-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: 3rem;
-}
+    .rejection-label {
+        font-size: 11px;
+        color: var(--soma-primary); /* Updated to Brand Primary */
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        font-weight: 700;
+    }
 
-.soma-pagination {
-    display: flex;
-    gap: 8px;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
+    .empty-state {
+        background: #ffffff;
+        padding: 40px 24px;
+        border-radius: 16px;
+        border: 1px dashed rgba(141, 126, 113, 0.3); /* Updated to Brand Color */
+        text-align: center;
+        margin-top: 10px;
+    }
 
-.soma-pagination li a,
-.soma-pagination li span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 0.85rem;
-    border: 1px solid rgba(190, 150, 118, 0.2);
-    background: transparent;
-    color: var(--soma-taupe, #706e6b);
-    transition: all 0.3s ease;
-}
+    /* Pagination */
+    .soma-pagination-wrap {
+        display: flex;
+        justify-content: center;
+        margin-top: 3rem;
+    }
 
-.soma-pagination li a:hover,
-.soma-pagination li.active span {
-    background: var(--soma-beige, #c49a72);
-    color: white;
-    border-color: var(--soma-beige, #c49a72);
-}
+    .soma-pagination {
+        display: flex;
+        gap: 8px;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
 
-.soma-pagination li.disabled span {
-    opacity: 0.3;
-    cursor: not-allowed;
-    background: transparent;
-    color: #cbd5e1;
-}
+    .soma-pagination li a,
+    .soma-pagination li span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.85rem;
+        border: 1px solid rgba(190, 150, 118, 0.3); /* Updated to Brand Primary */
+        background: transparent;
+        color: var(--soma-secondary); /* Updated to Brand Secondary */
+        transition: all 0.3s ease;
+    }
 
-/* Custom Button Color for Re-join */
-.btn-outline-custom-success {
-    color: #059669;
-    border-color: #059669;
-    background-color: transparent;
-    transition: all 0.2s ease;
-}
-.btn-outline-custom-success:hover {
-    background-color: #059669;
-    color: #ffffff;
-}
-</style>
+    .soma-pagination li a:hover,
+    .soma-pagination li.active span {
+        background: var(--soma-secondary); /* Updated to Brand Secondary */
+        color: white;
+        border-color: var(--soma-secondary);
+    }
 
-@if($tab === 'rates')
+    .soma-pagination li.disabled span {
+        opacity: 0.3;
+        cursor: not-allowed;
+        background: transparent;
+        color: rgba(141, 126, 113, 0.5); /* Updated to Brand Secondary */
+    }
+
+    /* Custom Button Color for Re-join */
+    .btn-outline-custom-success {
+        color: var(--soma-primary);
+        border-color: var(--soma-primary);
+        background-color: transparent;
+        transition: all 0.2s ease;
+    }
+    .btn-outline-custom-success:hover {
+        background-color: var(--soma-primary);
+        color: #ffffff;
+    }
+    </style>
+
     {{-- ================= RATES TAB CONTAINER ================= --}}
     <div id="purchasesList">
         @if($purchases->count() > 0)
@@ -325,7 +341,7 @@
                                                         </p>
                                                     @endif
                                                     <span class="mx-1 text-muted">•</span>
-                                                    <span class="text-info fw-semibold" style="font-size: 13px;">{{ $pur->class_remaining }} Classes Left</span>
+                                                    <span class="fw-semibold" style="font-size: 13px; color: var(--soma-primary);">{{ $pur->class_remaining }} Classes Left</span>
                                                 @endif
                                             </div>
 
@@ -336,7 +352,7 @@
                                                 <span class="mx-1 text-muted">•</span>
                                                 <span class="text-secondary">{{ $pur->amount }} K</span>
                                                 <span class="mx-1 text-muted">•</span>
-                                                <span class="text-primary">Got {{ $pkg->loyal_point ?? 0 }} Coins</span>
+                                                <span style="color: var(--soma-primary);">Got {{ $pkg->loyal_point ?? 0 }} Coins</span>
                                             </div>
                                         </div>
 
@@ -355,8 +371,8 @@
                                             @if($pur->pay_status === 'confirmed' && $fixExpiryDate)
                                                 @php $diff = $fixExpiryDate->diff($now); @endphp
                                                 @if ($pur->class_remaining == ($pkg->class_count ?? 0) && $fixExpiryDate->isFuture() && $expiryDate?->isFuture())
-                                                    <div class="d-flex align-items-center p-2 mb-3 bg-light border-start border-warning border-4 rounded shadow-sm">
-                                                        <i class="bi bi-clock-history text-warning me-3 fs-5"></i>
+                                                    <div class="d-flex align-items-center p-2 mb-3 bg-light border-start border-4 rounded shadow-sm" style="border-color: var(--soma-primary) !important;">
+                                                        <i class="bi bi-clock-history me-3 fs-5" style="color: var(--soma-primary);"></i>
                                                         <div>
                                                             <p class="mb-0 text-muted" style="font-size: 12px; line-height: 1.4;">
                                                                 To keep your package active, please book a class within
@@ -373,7 +389,7 @@
                                             <div class="info-grid">
                                                 <div class="info-block">
                                                     <div class="label">Transaction No</div>
-                                                    <div class="value text-primary font-monospace" style="font-size: 12px;">{{ $pur->transaction_no }}</div>
+                                                    <div class="value font-monospace" style="font-size: 12px; color: var(--soma-primary);">{{ $pur->transaction_no }}</div>
                                                 </div>
                                                 <div class="info-block">
                                                     <div class="label">Account Name</div>
@@ -450,7 +466,7 @@
                                                         </p>
                                                     @endif
                                                     <span class="mx-1 text-muted">•</span>
-                                                    <span class="text-info fw-semibold" style="font-size: 13px;">{{ $pur->class_remaining }} Classes Left</span>
+                                                    <span class="fw-semibold" style="font-size: 13px; color: var(--soma-primary);">{{ $pur->class_remaining }} Classes Left</span>
                                                 @endif
                                             </div>
 
@@ -461,7 +477,7 @@
                                                 <span class="mx-1 text-muted">•</span>
                                                 <span class="text-secondary">{{ $pur->amount }} K</span>
                                                 <span class="mx-1 text-muted">•</span>
-                                                <span class="text-primary">Got {{ $pkg->loyal_point ?? 0 }} Coins</span>
+                                                <span style="color: var(--soma-primary);">Got {{ $pkg->loyal_point ?? 0 }} Coins</span>
                                             </div>
                                         </div>
 
@@ -480,8 +496,8 @@
                                             @if($pur->pay_status === 'confirmed' && $fixExpiryDate)
                                                 @php $diff = $fixExpiryDate->diff($now); @endphp
                                                 @if ($pur->class_remaining == ($pkg->class_count ?? 0) && $fixExpiryDate->isFuture() && $expiryDate?->isFuture())
-                                                    <div class="d-flex align-items-center p-2 mb-3 bg-light border-start border-warning border-4 rounded shadow-sm">
-                                                        <i class="bi bi-clock-history text-warning me-3 fs-5"></i>
+                                                    <div class="d-flex align-items-center p-2 mb-3 bg-light border-start border-4 rounded shadow-sm" style="border-color: var(--soma-primary) !important;">
+                                                        <i class="bi bi-clock-history me-3 fs-5" style="color: var(--soma-primary);"></i>
                                                         <div>
                                                             <p class="mb-0 text-muted" style="font-size: 12px; line-height: 1.4;">
                                                                 To keep your package active, please book a class within
@@ -498,7 +514,7 @@
                                             <div class="info-grid">
                                                 <div class="info-block">
                                                     <div class="label">Transaction No</div>
-                                                    <div class="value text-primary font-monospace" style="font-size: 12px;">{{ $pur->transaction_no }}</div>
+                                                    <div class="value font-monospace" style="font-size: 12px; color: var(--soma-primary);">{{ $pur->transaction_no }}</div>
                                                 </div>
                                                 <div class="info-block">
                                                     <div class="label">Account Name</div>
@@ -532,7 +548,7 @@
             <div class="purchase-empty-full-width">
                 <div class="empty-state text-center py-4">
                     <div class="fs-2 mb-2">🎁</div>
-                    <div class="text-dark fw-bold">No purchase rates records yet</div>
+                    <div class="fw-bold" style="color: var(--soma-secondary);">No purchase rates records yet</div>
                 </div>
             </div>
         @endif
@@ -543,6 +559,36 @@
     </div>
 @else
     {{-- ================= CLASSES TAB CONTAINER ================= --}}
+    
+    {{-- Google Fonts for Fahkwang (Included for Classes Tab) --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+    /* Ensure styles load when tab toggled */
+    :root {
+        --soma-primary: #BE9676; 
+        --soma-secondary: #8D7E71; 
+        --soma-bg: #FFF7E9; 
+    }
+    body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+        font-family: 'Fahkwang', sans-serif !important;
+    }
+    .package-title, .value { color: var(--soma-secondary); }
+    .chevron-icon { color: var(--soma-secondary); }
+    .purchase-card.is-expanded { box-shadow: 0 10px 15px -3px rgba(141, 126, 113, 0.1); border-color: rgba(190, 150, 118, 0.4); }
+    .purchase-card.is-expanded .chevron-icon { color: var(--soma-primary); }
+    .rejection-reason-box { background: var(--soma-bg); border-left: 3px solid var(--soma-primary); }
+    .rejection-label { color: var(--soma-primary); }
+    .empty-state { border: 1px dashed rgba(141, 126, 113, 0.3); }
+    .soma-pagination li a, .soma-pagination li span { border: 1px solid rgba(190, 150, 118, 0.3); color: var(--soma-secondary); }
+    .soma-pagination li a:hover, .soma-pagination li.active span { background: var(--soma-secondary); border-color: var(--soma-secondary); color: white; }
+    .soma-pagination li.disabled span { color: rgba(141, 126, 113, 0.5); }
+    .btn-outline-custom-success { color: var(--soma-primary); border-color: var(--soma-primary); background-color: transparent; transition: all 0.2s ease; }
+    .btn-outline-custom-success:hover { background-color: var(--soma-primary); color: #ffffff; }
+    </style>
+
     <div id="classesList">
         @if($classes->count() > 0)
             <div class="purchase-columns-wrapper">
@@ -620,8 +666,8 @@
                                                     </div>
                                                     
                                                     @if($class->status === 'cancelled')
-                                                        <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center" style="border-color: rgba(245, 158, 11, 0.3) !important;">
-                                                            <span style="font-size: 12px; color: #d97706;"><i class="bi bi-info-circle me-1"></i> Changed your mind?</span>
+                                                        <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center" style="border-color: rgba(190, 150, 118, 0.3) !important;">
+                                                            <span style="font-size: 12px; color: var(--soma-primary);"><i class="bi bi-info-circle me-1"></i> Changed your mind?</span>
                                                             <a href="{{ route('join.class', $class->selected_class_id) }}" class="btn btn-sm btn-outline-custom-success py-1 px-3" onclick="return confirm('Are you sure you want to re-join this class?');">
                                                                 <i class="bi bi-arrow-repeat me-1"></i> Re-join
                                                             </a>
@@ -632,15 +678,15 @@
 
                                             {{-- CANCEL BUTTON (Show if Confirmed or Waitlisted) --}}
                                             @if(in_array($class->status, ['confirmed', 'waitlisted']))
-                                                <hr style="border-color: #cbd5e1; margin: 16px 0 12px 0;">
+                                                <hr style="border-color: rgba(141, 126, 113, 0.2); margin: 16px 0 12px 0;">
                                                 @if($canCancel)
                                                     <!-- Fixed Modal Target ID to use $class->id -->
-                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#cancelModal_{{ $class->id }}">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#cancelModal_{{ $class->id }}" style="color: #dc3545; border-color: #dc3545;">
                                                         <i class="bi bi-x-circle me-1"></i> Cancel Booking
                                                     </button>
                                                 @else
-                                                    <div class="text-center text-muted fw-medium" style="font-size: 11.5px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                                                        <i class="bi bi-exclamation-circle text-warning me-1"></i> 
+                                                    <div class="text-center fw-medium" style="color: var(--soma-secondary); font-size: 11.5px; background: rgba(141, 126, 113, 0.05); padding: 10px; border-radius: 6px; border: 1px dashed rgba(141, 126, 113, 0.3);">
+                                                        <i class="bi bi-exclamation-circle me-1" style="color: var(--soma-primary);"></i> 
                                                         Cancellation is only allowed 24 hours prior to class start.
                                                     </div>
                                                 @endif
@@ -727,8 +773,8 @@
                                                     </div>
                                                     
                                                     @if($class->status === 'cancelled')
-                                                        <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center" style="border-color: rgba(245, 158, 11, 0.3) !important;">
-                                                            <span style="font-size: 12px; color: #d97706;"><i class="bi bi-info-circle me-1"></i> Changed your mind?</span>
+                                                        <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center" style="border-color: rgba(190, 150, 118, 0.3) !important;">
+                                                            <span style="font-size: 12px; color: var(--soma-primary);"><i class="bi bi-info-circle me-1"></i> Changed your mind?</span>
                                                             <a href="{{ route('join.class', $class->selected_class_id) }}" class="btn btn-sm btn-outline-custom-success py-1 px-3" onclick="return confirm('Are you sure you want to re-join this class?');">
                                                                 <i class="bi bi-arrow-repeat me-1"></i> Re-join
                                                             </a>
@@ -739,15 +785,15 @@
 
                                             {{-- CANCEL BUTTON (Show if Confirmed or Waitlisted) --}}
                                             @if(in_array($class->status, ['confirmed', 'waitlisted']))
-                                                <hr style="border-color: #cbd5e1; margin: 16px 0 12px 0;">
+                                                <hr style="border-color: rgba(141, 126, 113, 0.2); margin: 16px 0 12px 0;">
                                                 @if($canCancel)
                                                     <!-- Fixed Modal Target ID to use $class->id -->
-                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#cancelModal_{{ $class->id }}">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#cancelModal_{{ $class->id }}" style="color: #dc3545; border-color: #dc3545;">
                                                         <i class="bi bi-x-circle me-1"></i> Cancel Booking
                                                     </button>
                                                 @else
-                                                    <div class="text-center text-muted fw-medium" style="font-size: 11.5px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                                                        <i class="bi bi-exclamation-circle text-warning me-1"></i> 
+                                                    <div class="text-center fw-medium" style="color: var(--soma-secondary); font-size: 11.5px; background: rgba(141, 126, 113, 0.05); padding: 10px; border-radius: 6px; border: 1px dashed rgba(141, 126, 113, 0.3);">
+                                                        <i class="bi bi-exclamation-circle me-1" style="color: var(--soma-primary);"></i> 
                                                         Cancellation is only allowed 24 hours prior to class start.
                                                     </div>
                                                 @endif
@@ -764,7 +810,7 @@
             <div class="purchase-empty-full-width">
                 <div class="empty-state text-center py-4">
                     <div class="fs-2 mb-2">🎁</div>
-                    <div class="text-dark fw-bold">No class bookings found</div>
+                    <div class="fw-bold" style="color: var(--soma-secondary);">No class bookings found</div>
                 </div>
             </div>
         @endif
@@ -775,13 +821,13 @@
     <div class="modal fade" id="cancelModal_{{ $class->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <!-- Note: Action url အဟောင်းအတိုင်း (selected_class_id) ပဲထားပေးထားပါတယ်။ Backend က အဲ့ဒါလိုလို့ထင်လို့ပါ။ -->
-            <form action="{{ route('remove.class', $class->selected_class_id) }}" method="POST" class="modal-content">
+            <form action="{{ route('remove.class', $class->selected_class_id) }}" method="POST" class="modal-content" style="border-color: var(--soma-primary); font-family: 'Fahkwang', sans-serif;">
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="status" value="cancelled">
                 
-                <!-- Applied #8D7E71 to the header -->
-                <div class="modal-header text-white" style="background-color: #8D7E71;">
+                <!-- Applied var(--soma-secondary) to the header -->
+                <div class="modal-header text-white" style="background-color: var(--soma-secondary);">
                     <h5 class="modal-title fw-bold">
                         <i class="fas fa-ban me-2"></i> Cancel Transaction
                     </h5>
@@ -789,14 +835,14 @@
                 </div>
                 
                 <div class="modal-body">
-                    <label class="fw-bold mb-2">Reason for Cancellation <span style="color: #8D7E71;">*</span></label>
-                    <textarea name="cancellation_reason" class="form-control" rows="3" required placeholder="Please provide a reason for cancellation."></textarea>
+                    <label class="fw-bold mb-2" style="color: var(--soma-secondary);">Reason for Cancellation <span style="color: var(--soma-primary);">*</span></label>
+                    <textarea name="cancellation_reason" class="form-control" rows="3" required placeholder="Please provide a reason for cancellation." style="border-color: rgba(190, 150, 118, 0.4);"></textarea>
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <!-- Applied #8D7E71 to the submit button -->
-                    <button type="submit" class="btn text-white" style="background-color: #8D7E71;">Submit Cancellation</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background-color: #cbd5e1; border: none; color: var(--soma-secondary);">Cancel</button>
+                    <!-- Applied var(--soma-secondary) to the submit button -->
+                    <button type="submit" class="btn text-white" style="background-color: var(--soma-secondary);">Submit Cancellation</button>
                 </div>
             </form>
         </div>

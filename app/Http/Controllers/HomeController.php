@@ -17,11 +17,14 @@ use App\Models\CloseDate;
 use App\Models\User;
 use App\Models\UserPackageDiscount;
 use App\Models\Workshop;
+use App\Models\Attendance;
 use App\Notifications\AdminNotification;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Resend\Laravel\Facades\Resend;
 use App\Mail\OrderShipped;
 
@@ -36,129 +39,215 @@ class HomeController extends Controller
 
     public function class(Request $request)
     {
-        $today = Carbon::today(); // 2026-08-11
-        $todayDay = $today->format('D'); // e.g., 'Tue' (use 'l' for full name like 'Tuesday')
+        $today = Carbon::today('Asia/Yangon');
+        $todayDay = $today->format('D'); // ဥပမာ - 'Mon', 'Tue'
 
-        // 2. Fetch classes valid for today
-        $classes = ClassSchedule::with('category')
-            ->where('status', 'book')
-            // // Check if today is within start_date and end_date
-            // ->whereDate('start_date', '<=', $today)
-            // ->whereDate('end_date', '>=', $today)
-            // Check if today matches scheduled days (JSON array)
-            // ->whereJsonContains('days', $todayDay)
-            // Filter category if needed
-            ->whereHas('category', function ($query) {
-                $query->where('name', 'Yoga');
+        $completedClassIdsToday = Attendance::whereDate('attendance_date', $today->format('Y-m-d'))
+            ->where('admin_approve', 1)
+            ->pluck('class_id')
+            ->toArray();
+
+        $dbClasses = ClassSchedule::with(['category'])
+            ->where('status', '!=', 'cancelled')
+            ->where('status', '!=', 'completed')
+            ->whereDate('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
             })
+            ->where('days', 'like', "%{$todayDay}%")
+            ->whereNotIn('id', $completedClassIdsToday)
             ->get();
-        $allImages = Gallery::all();
 
-        foreach ($classes as $class) {
-            // Manually fetch instructors based on the array of IDs
-            $class->instructor = Instructor::with('user')->whereIn('id', $class->instructor_ids ?? [])->get()->toArray();
+        $expandedClasses = collect();
+        foreach ($dbClasses as $class) {
+            $exactEndTime = Carbon::parse($today->format('Y-m-d') . ' ' . ($class->end_time ?? '23:59:59'), 'Asia/Yangon');
+            if (Carbon::now('Asia/Yangon')->lessThanOrEqualTo($exactEndTime)) {
+                $session = clone $class;
+                $session->target_date = $today->format('Y-m-d');
+                $expandedClasses->push($session);
+            }
         }
+
+        $expandedClasses = $expandedClasses->sortBy(function ($item) {
+            return $item->target_date . ' ' . $item->start_time;
+        })->values();
+
+        $perPage = 10;
+        $page = Paginator::resolveCurrentPage() ?: 1;
+        $classes = new LengthAwarePaginator(
+            $expandedClasses->forPage($page, $perPage),
+            $expandedClasses->count(),
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'query' => $request->query()]
+        );
+
+        $classes->getCollection()->each(function ($class) {
+            $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
+            if (!is_array($ids)) $ids = [$ids];
+
+            $class->instructor = Instructor::with('user')
+                ->whereIn('id', $ids)
+                ->get()
+                ->toArray();
+        });
+
         $instructors = Instructor::get();
         $categories = Category::get();
-        $bookings = Booking::where('registered_id', auth()->id())->get();
+
+        $bookings = auth()->check() ? Booking::where('registered_id', auth()->id())->get() : collect();
         $bookingsAll = Booking::all();
+        $allImages = Gallery::all();
+
         return view("frontend.class", compact('classes', 'instructors', 'categories', 'bookings', 'bookingsAll', 'allImages'));
     }
 
     public function classDetails(Request $request)
     {
         $class = ClassSchedule::with('category')->findOrFail($request->id);
-        $class->instructor = Instructor::with('user')->whereIn('id', $class->instructor_ids ?? [])->get()->toArray();
+
+        $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
+        if (!is_array($ids)) $ids = [$ids];
+
+        $class->instructor = Instructor::with('user')->whereIn('id', $ids)->get()->toArray();
 
         $bookingCount = $class->bookings()->where('status', 'confirmed')->count();
         $isFull = $bookingCount >= $class->capacity;
-        $bookings = Booking::where('registered_id', auth()->id())->get();
-        $waitingApproval = Comment::where('class_id', $class->id)
+
+        $bookings = auth()->check() ? Booking::where('registered_id', auth()->id())->get() : collect();
+
+        $waitingApproval = auth()->check() ? Comment::where('class_id', $class->id)
             ->where('user_id', auth()->id())
             ->where('admin_approval', false)
-            ->get();
+            ->get() : collect();
+
         $comments = Comment::where('class_id', $class->id)
             ->whereNull('parent_id')
             ->where('admin_approval', true)
             ->with(['user', 'approvedReplies'])
             ->latest()
             ->get();
+
         return view("frontend.class_details", compact('class', 'bookingCount', 'isFull', 'bookings', 'comments', 'waitingApproval'));
     }
 
     public function search(Request $request)
     {
-        // Initialize the query with eager loading relationships
-        $query = ClassSchedule::with('category');
+        $today = Carbon::today('Asia/Yangon');
+        $isSearch = $request->has('category') || $request->has('search') || $request->has('instructor');
 
+        $fromDate = $request->filled('from_date') ? Carbon::parse($request->from_date) : $today->copy();
 
-        // 1. Keyword Text Search Scope
+        if ($request->filled('to_date')) {
+            $toDate = Carbon::parse($request->to_date);
+        } else {
+            $toDate = $isSearch ? $fromDate->copy()->addDays(6) : $fromDate->copy();
+        }
+
+        $completedClassIdsToday = Attendance::whereDate('attendance_date', $today->format('Y-m-d'))
+            ->where('admin_approve', 1)
+            ->pluck('class_id')
+            ->toArray();
+
+        $query = ClassSchedule::with(['category'])
+            ->where('status', '!=', 'cancelled')
+            ->where('status', '!=', 'completed')
+            ->whereDate('start_date', '<=', $toDate)
+            ->where(function ($q) use ($fromDate) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $fromDate);
+            });
+
         if ($request->filled('search')) {
             $search = $request->search;
-
             $query->where(function ($q) use ($search) {
                 $q->where('class_name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereDate('start_date', 'like', "%{$search}%")
-                    ->orWhereDate('end_date', 'like', "%{$search}%")
-
-                    // 1. Search category relation
                     ->orWhereHas('category', function ($innerQ) use ($search) {
-                        $innerQ->where('name', 'like', "%{$search}%");
-                    })
-
-                    // 2. Search instructors matching the name, then check if instructor_ids contains their ID
-                    ->orWhere(function ($instructorQuery) use ($search) {
-                        $matchingInstructorIds = \App\Models\Instructor::whereHas('user', function ($u) use ($search) {
-                            $u->where('name', 'like', "%{$search}%");
-                        })->pluck('id')->toArray();
-
-                        foreach ($matchingInstructorIds as $id) {
-                            $instructorQuery->orWhereJsonContains('instructor_ids', (string) $id)
-                                ->orWhereJsonContains('instructor_ids', (int) $id);
-                        }
+                    $innerQ->where('name', 'like', "%{$search}%");
                     });
             });
         }
 
-        if ($request->filled('from_date') && $request->filled('to_date')) {
-            $query->whereBetween('start_date', [$request->from_date, $request->to_date]);
-        } elseif ($request->filled('from_date')) {
-            $query->where('start_date', '>=', $request->from_date);
-        } elseif ($request->filled('to_date')) {
-            $query->where('start_date', '<=', $request->to_date);
-        }
-
-        // 3. FIXED: Direct Foreign Key Assignment Matching
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
-        // 4. Instructor Match Filter
         if ($request->filled('instructor')) {
             $instructorId = $request->instructor;
-
             $query->where(function ($q) use ($instructorId) {
                 $q->whereJsonContains('instructor_ids', (int) $instructorId)
                     ->orWhereJsonContains('instructor_ids', (string) $instructorId);
             });
         }
 
-        $classes = $query->paginate(8);
-        $classes->getCollection()->each(function ($class) {
-            if ($class->instructor_ids) {
-                $ids = $class->instructor_ids;
-                $class->instructor = Instructor::with('user')
-                    ->whereIn('id', $ids)
-                    ->get();
+        $dbClasses = $query->get();
+        $expandedClasses = collect();
+        $daysMap = ['Sun' => 0, 'Mon' => 1, 'Tue' => 2, 'Wed' => 3, 'Thu' => 4, 'Fri' => 5, 'Sat' => 6];
+
+        foreach ($dbClasses as $class) {
+            $classStart = Carbon::parse($class->start_date)->startOfDay();
+            $classEnd = $class->end_date ? Carbon::parse($class->end_date)->endOfDay() : Carbon::parse('2099-12-31')->endOfDay();
+
+            $classDaysRaw = is_string($class->days) ? json_decode($class->days, true) : ($class->days ?? []);
+            if (!is_array($classDaysRaw)) $classDaysRaw = [];
+
+            $classDayInts = [];
+            foreach ($classDaysRaw as $d) {
+                if (!is_string($d) && !is_numeric($d)) continue;
+                $shortDay = substr(ucfirst(trim((string)$d)), 0, 3);
+                if (isset($daysMap[$shortDay])) $classDayInts[] = $daysMap[$shortDay];
             }
+
+            $currentDate = $fromDate->copy();
+
+            while ($currentDate->lessThanOrEqualTo($toDate)) {
+                if ($currentDate->between($classStart, $classEnd) && in_array($currentDate->dayOfWeek, $classDayInts)) {
+                    if ($currentDate->isSameDay($today) && in_array($class->id, $completedClassIdsToday)) {
+                        $currentDate->addDay();
+                        continue;
+                    }
+
+                    $exactEndTime = Carbon::parse($currentDate->format('Y-m-d') . ' ' . ($class->end_time ?? '23:59:59'), 'Asia/Yangon');
+                    if (Carbon::now('Asia/Yangon')->lessThanOrEqualTo($exactEndTime)) {
+                        $session = clone $class;
+                        $session->target_date = $currentDate->format('Y-m-d');
+                        $expandedClasses->push($session);
+                    }
+                }
+                $currentDate->addDay();
+            }
+        }
+
+        $expandedClasses = $expandedClasses->sortBy(function ($item) {
+            return $item->target_date . ' ' . $item->start_time;
+        })->values();
+
+        $perPage = 10;
+        $page = Paginator::resolveCurrentPage() ?: 1;
+        $classes = new LengthAwarePaginator(
+            $expandedClasses->forPage($page, $perPage),
+            $expandedClasses->count(),
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'query' => $request->query()]
+        );
+
+        $classes->getCollection()->each(function ($class) {
+            $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
+            if (!is_array($ids)) $ids = [$ids];
+
+            $class->instructor = Instructor::with('user')
+                ->whereIn('id', $ids)
+                ->get()
+                ->toArray();
         });
 
         $instructors = Instructor::with('user')->get();
         $categories = Category::all();
-        $bookings = Booking::where('registered_id', auth()->id())->get();
+        $bookings = auth()->check() ? Booking::where('registered_id', auth()->id())->get() : collect();
         $bookingsAll = Booking::all();
-        return view('frontend.searchResult', compact('classes', 'instructors', 'categories', 'bookings', 'bookingsAll'));
+        $allImages = Gallery::all();
+
+        return view('frontend.class', compact('classes', 'instructors', 'categories', 'bookings', 'bookingsAll', 'allImages'));
     }
 
     public function contact()
@@ -175,7 +264,8 @@ class HomeController extends Controller
         }
 
         $packages = $query->get();
-        $userDiscountPackages = UserPackageDiscount::with('package')->where('user_id', auth()->id())->get();
+
+        $userDiscountPackages = auth()->check() ? UserPackageDiscount::with('package')->where('user_id', auth()->id())->get() : collect();
         $categories = Category::all();
 
         return view('frontend.rates', compact('packages', 'categories', 'userDiscountPackages'));
@@ -209,7 +299,6 @@ class HomeController extends Controller
         $fromDate = $request->input('from_date', $defaultStartDate);
         $toDate = $request->input('to_date', $defaultEndDate);
 
-        // 1. Fetch schedules within date range with required relationships
         $schedules = ClassSchedule::with(['category', 'bookings.user'])
             ->whereDate('start_date', '>=', $fromDate)
             ->whereDate('start_date', '<=', $toDate)
@@ -217,27 +306,23 @@ class HomeController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        // 2. Attach instructors to each schedule object
         $schedules->each(function ($schedule) {
             if (!empty($schedule->instructor_ids)) {
-                $ids = is_array($schedule->instructor_ids)
-                    ? $schedule->instructor_ids
-                    : json_decode($schedule->instructor_ids, true);
+                $ids = is_string($schedule->instructor_ids) ? json_decode($schedule->instructor_ids, true) : $schedule->instructor_ids;
+                if (!is_array($ids)) $ids = [$ids];
 
-                // Plural 'instructors' matches your Blade view
                 $schedule->instructors = Instructor::with('user')
-                    ->whereIn('id', $ids ?? [])
+                    ->whereIn('id', $ids)
                     ->get();
             } else {
                 $schedule->instructors = collect();
             }
         });
 
-        // 3. Group the ENRICHED $schedules collection directly by date
         $groupedSchedules = $schedules->groupBy(function ($schedule) {
             return Carbon::parse($schedule->start_date)->format('l, F j');
         });
-        // Cleaned up for production view render
+
         return view('frontend.scheduleList', compact('groupedSchedules', 'fromDate', 'toDate'));
     }
 
@@ -246,8 +331,10 @@ class HomeController extends Controller
         $package = Package::findOrFail($id);
         $payments = Payment::get();
         $redeem = false;
-        $onboarding = Onboarding::where('user_id', auth()->id())->first();
-        $discountPackage = UserPackageDiscount::with('package')->where('user_id', auth()->id())->where('package_id', $id)->first();
+
+        $onboarding = auth()->check() ? Onboarding::where('user_id', auth()->id())->first() : null;
+        $discountPackage = auth()->check() ? UserPackageDiscount::with('package')->where('user_id', auth()->id())->where('package_id', $id)->first() : null;
+
         return view('frontend.payment', compact('payments', 'package', 'redeem', 'onboarding', 'discountPackage'));
     }
 
@@ -262,22 +349,20 @@ class HomeController extends Controller
 
         $payments = Payment::get();
         $redeem = true;
+
         $onboarding = Onboarding::where('user_id', auth()->id())->first();
         $discountPackage = UserPackageDiscount::with('package')->where('user_id', auth()->id())->where('package_id', $id)->first();
+
         return view('frontend.payment', compact('payments', 'package', 'redeem', 'onboarding', 'discountPackage'));
     }
 
     public function paymentSubmit(Request $request)
     {
-        // Remove dd($request->receiver_name); once you're done testing
-
-        // 1. Validate ALL incoming fields, including receiver_name
         $validated = $request->validate([
             'registered_id' => 'required|exists:users,id',
             'package' => 'required|exists:packages,id',
             'sender_name' => 'required|string|max:255',
-            'sender_phone' => 'required|string',
-            'receiver_name' => 'nullable|string|max:255', // <-- ADD THIS RULE
+            'receiver_name' => 'nullable|string|max:255',
             'amount' => 'required|numeric',
             'transaction_id' => 'nullable|string',
             'gateway_method' => 'required|string',
@@ -286,17 +371,14 @@ class HomeController extends Controller
             'screenshot' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // 2. Fetch package details
         $packageModel = Package::findOrFail($request->package);
 
-        // 3. Create the purchase record
         DB::transaction(function () use ($request, $packageModel) {
-
             Purchase::create([
                 'registered_id' => $request->registered_id,
                 'selected_packages_id' => $request->package,
                 'account_name' => $request->sender_name,
-                'receiver_name' => $request->receiver_name ?? 'N/A', // <-- Fallback ensures MySQL never receives raw NULL
+                'receiver_name' => $request->receiver_name ?? 'N/A',
                 'amount' => $request->amount,
                 'phone' => $request->sender_phone,
                 'transaction_no' => $request->transaction_id ?? 'CASH-' . strtoupper(uniqid()),
@@ -308,12 +390,10 @@ class HomeController extends Controller
                 'fix_expires_at' => now()->addDays($packageModel->fix_duration),
             ]);
 
-            // 4. Loyalty Coin Deduction Logic
             $coinsRequested = (float) $request->coin_used;
 
             if ($coinsRequested > 0) {
                 $userId = $request->registered_id;
-
                 $user = User::where('id', $userId)->lockForUpdate()->firstOrFail();
 
                 if ($user->coins < $coinsRequested) {
@@ -332,8 +412,7 @@ class HomeController extends Controller
                 $pointsToDeduct = $coinsRequested;
 
                 foreach ($activePoints as $pointRecord) {
-                    if ($pointsToDeduct <= 0)
-                        break;
+                    if ($pointsToDeduct <= 0) break;
 
                     $availableInBatch = round((float) $pointRecord->points, 4);
 
@@ -342,7 +421,6 @@ class HomeController extends Controller
                         $pointRecord->points = $remaining;
                         $pointRecord->is_redeemed = ($remaining <= 0);
                         $pointRecord->save();
-
                         $pointsToDeduct = 0;
                     } else {
                         $pointsToDeduct = round($pointsToDeduct - $availableInBatch, 4);
@@ -350,10 +428,6 @@ class HomeController extends Controller
                         $pointRecord->is_redeemed = true;
                         $pointRecord->save();
                     }
-                }
-
-                if ($pointsToDeduct > 0) {
-                    throw new \Exception("Mismatch between total user balance and active points batches.");
                 }
             }
         });
@@ -412,7 +486,9 @@ class HomeController extends Controller
 
         $classes->getCollection()->each(function ($booking) {
             if ($booking->class) {
-                $ids = $booking->class->instructor_ids ?? [];
+                $ids = is_string($booking->class->instructor_ids) ? json_decode($booking->class->instructor_ids, true) : ($booking->class->instructor_ids ?? []);
+                if (!is_array($ids)) $ids = [$ids];
+
                 $booking->class->instructors = Instructor::with('user')
                     ->whereIn('id', $ids)
                     ->get();
@@ -426,11 +502,8 @@ class HomeController extends Controller
         return view('frontend.history', compact('purchases', 'classes', 'tab'));
     }
 
-    public function joinClass($id)
+    public function joinClass(Request $request, $id)
     {
-        // ---------------------------------------------------------
-        // ADDED: Check if there is an active close date
-        // ---------------------------------------------------------
         $closeDate = CloseDate::latest()->first();
         if ($closeDate) {
             return redirect()->back()
@@ -438,7 +511,22 @@ class HomeController extends Controller
         }
 
         $class = ClassSchedule::findOrFail($id);
-        $packages = Package::latest()->paginate(4);
+
+        $dateParam = $request->query('date');
+        if (is_array($dateParam)) $dateParam = $dateParam[0];
+        $targetDateStr = $dateParam ?: Carbon::today('Asia/Yangon')->format('Y-m-d');
+        $targetDate = Carbon::parse($targetDateStr);
+
+        $existingBooking = Booking::where('registered_id', auth()->id())
+            ->where('selected_class_id', $class->id)
+            ->whereDate('booked_date', $targetDateStr)
+            ->whereIn('status', ['confirmed', 'waitlisted'])
+            ->first();
+
+        if ($existingBooking) {
+            return redirect()->back()
+                ->with('warning', "You have already joined this class for {$targetDate->format('d M Y')}.");
+        }
 
         $categoryMatchExists = Purchase::whereHas('package', function ($query) use ($class) {
             $query->where('type', $class->category_id);
@@ -471,7 +559,8 @@ class HomeController extends Controller
                 ->with('warning', 'You do not have an active package. Please purchase one.');
         }
 
-        $bookedCount = $class->bookings()
+        $bookedCount = Booking::where('selected_class_id', $class->id)
+            ->whereDate('booked_date', $targetDateStr)
             ->where('status', 'confirmed')
             ->count();
 
@@ -479,6 +568,7 @@ class HomeController extends Controller
         $booking->package_id = $activePurchase->selected_packages_id;
         $booking->registered_id = auth()->id();
         $booking->selected_class_id = $class->id;
+        $booking->booked_date = $targetDateStr;
 
         $admins = User::where('name', 'System Admin')->get();
         $classCapacity = $class->capacity ?? 0;
@@ -489,7 +579,7 @@ class HomeController extends Controller
 
             $data = [
                 'title' => 'New Waitlist Booking',
-                'message' => auth()->user()->name . ' is waiting to join ' . $class->class_name,
+                'message' => auth()->user()->name . ' is waiting to join ' . $class->class_name . ' on ' . $targetDate->format('d M Y'),
                 'url' => 'waitlist.index'
             ];
 
@@ -499,7 +589,7 @@ class HomeController extends Controller
             $activePurchase->decrement('class_remaining');
 
             return redirect()->back()
-                ->with('warning', 'Class is full. You have been added to the waiting list. Check updates in your Library page.');
+                ->with('warning', "Class is full for {$targetDate->format('d M Y')}. You have been added to the waiting list.");
         }
 
         $booking->status = 'confirmed';
@@ -507,22 +597,27 @@ class HomeController extends Controller
         $activePurchase->decrement('class_remaining');
 
         return redirect()->back()
-            ->with('success', 'Successfully joined the class. Check updates in your Library page.');
+            ->with('success', "Successfully joined the class for {$targetDate->format('d M Y')}. Check updates in your Library page.");
     }
 
     public function removeClass(Request $request, $id)
     {
-        // Validation စစ်ရန် (အကြောင်းပြချက် ထည့်သွင်းထားခြင်း ရှိ/မရှိ)
         $request->validate([
             'cancellation_reason' => 'required|string|max:500'
         ]);
 
-        // Login ဝင်ထားတဲ့ user ရဲ့ booking ဟုတ်မဟုတ် စစ်ဆေးပါမယ်
-        // $id နေရာမှာ UI က $class->selected_class_id ကို လှမ်းပို့တာဖြစ်လို့ selected_class_id ကို စစ်ပါမယ်
-        $booking = Booking::where('registered_id', auth()->id())
+        $targetDateStr = $request->query('date');
+        if (is_array($targetDateStr)) $targetDateStr = $targetDateStr[0];
+
+        $query = Booking::where('registered_id', auth()->id())
             ->where('selected_class_id', $id)
-            ->whereIn('status', ['confirmed', 'waitlisted'])
-            ->first();
+            ->whereIn('status', ['confirmed', 'waitlisted']);
+
+        if ($targetDateStr) {
+            $query->whereDate('booked_date', $targetDateStr);
+        }
+
+        $booking = $query->orderBy('booked_date', 'asc')->first();
 
         if (!$booking) {
             return redirect()->back()
@@ -531,7 +626,6 @@ class HomeController extends Controller
 
         $booking->update([
             'status' => 'cancelled',
-            // 'cancellation_reason' => $request->cancellation_reason,
             'byWho' => 'User'
         ]);
 
@@ -562,32 +656,31 @@ class HomeController extends Controller
         return redirect()->back()
             ->with('success', 'Successfully cancelled the class booking.');
     }
-    /**
-     * User ၏ Class Booking History များကို ဆွဲထုတ်ပြသမည့် Method
-     */
+
     public function myClassHistory()
     {
         $userId = auth()->id();
 
-        // 1. Booking model ထဲက classSchedule() relationship ကို သုံးပါ
-        $bookings = \App\Models\Booking::with(['classSchedule.category'])
+        $bookings = Booking::with(['classSchedule.category'])
             ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
 
         foreach ($bookings as $booking) {
-            // 2. Booking model ထဲက classSchedule ကို ခေါ်ပါ
             $class = $booking->classSchedule;
 
             if ($class && !empty($class->instructor_ids)) {
-                $class->instructorList = \App\Models\Instructor::with('user')
-                    ->whereIn('id', $class->instructor_ids)
+                $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : $class->instructor_ids;
+                if (!is_array($ids)) $ids = [$ids];
+
+                $class->instructorList = Instructor::with('user')
+                    ->whereIn('id', $ids)
                     ->get();
             } else {
-                $class->instructorList = collect();
+                if ($class) {
+                    $class->instructorList = collect();
+                }
             }
-
-            // 3. View ဖိုင်မှာ $booking->assigned_class သုံးနိုင်အောင် assign လုပ်ပေးခြင်း
             $booking->assigned_class = $class;
         }
 

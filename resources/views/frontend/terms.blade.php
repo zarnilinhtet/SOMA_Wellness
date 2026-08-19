@@ -1,7 +1,126 @@
 @extends('layouts.link')
 
 @section('content')
-    <div class="terms-page-wrapper py-5" style="background: #fdfcfb; min-height: 100vh;">
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Brand Variables & Fonts --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+        }
+
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
+        .text-dark {
+            color: var(--soma-secondary) !important;
+        }
+
+        .terms-container {
+            background: var(--soma-bg);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(190, 150, 118, 0.3);
+            max-width: 780px;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(141, 126, 113, 0.08);
+        }
+
+        /* Target the nav container */
+        .justification-tabs {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            border-bottom: 2px solid rgba(190, 150, 118, 0.2) !important;
+            gap: 20px;
+        }
+
+        .justification-tabs .nav-link {
+            background: transparent !important;
+            color: rgba(141, 126, 113, 0.6) !important;
+            border: none !important;
+            font-weight: 500;
+            font-size: 15px;
+            position: relative;
+            padding-bottom: 12px !important;
+            margin-bottom: -2px !important;
+            border-bottom: 2px solid transparent !important;
+            transition: all 0.2s ease;
+        }
+
+        .justification-tabs .nav-link:hover {
+            color: var(--soma-primary) !important;
+        }
+
+        /* Active State: Bold Text + Colored Underline */
+        .justification-tabs .nav-link.active {
+            color: var(--soma-secondary) !important;
+            font-weight: 700 !important;
+            border-bottom: 2px solid var(--soma-secondary) !important;
+        }
+
+        .terms-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .terms-list li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            font-size: 14.5px;
+            line-height: 1.7;
+            color: var(--soma-secondary);
+        }
+
+        .terms-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .icon-box {
+            background: rgba(190, 150, 118, 0.15);
+            color: var(--soma-primary);
+            min-width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            margin-top: 2px;
+            font-size: 13px;
+        }
+
+        .icon-box.warning {
+            background: rgba(219, 148, 34, 0.12);
+            color: #db9422;
+        }
+
+        .icon-box.danger {
+            background: rgba(214, 40, 40, 0.1);
+            color: #d62828;
+        }
+
+        .terms-footer-note {
+            font-size: 12px;
+            color: rgba(141, 126, 113, 0.8);
+            margin-top: 35px;
+            border-top: 1px solid rgba(190, 150, 118, 0.3);
+            padding-top: 20px;
+            margin-bottom: 0;
+            text-align: center;
+        }
+    </style>
+
+    <div class="terms-page-wrapper py-5" style="background: #ffffff; min-height: 100vh;">
         <div class="terms-container">
 
             <ul class="nav justification-tabs mb-4 justify-content-center" id="termsTabs" role="tablist">
@@ -88,109 +207,6 @@
             </p>
         </div>
     </div>
-
-    <style>
-        .terms-container {
-            background: #FAF8F5;
-            padding: 40px;
-            border-radius: 20px;
-            border: 1px solid rgba(190, 150, 118, 0.2);
-            max-width: 780px;
-            margin: 0 auto;
-            box-shadow: 0 10px 30px rgba(190, 150, 118, 0.05);
-        }
-
-        /* Target the nav container */
-        .justification-tabs {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            border-bottom: 2px solid rgba(190, 150, 118, 0.15) !important;
-            /* Elegant background track line */
-            gap: 20px;
-        }
-
-        .justification-tabs .nav-link {
-            background: transparent !important;
-            color: #888888 !important;
-            border: none !important;
-            font-weight: 500;
-            font-size: 15px;
-            position: relative;
-            padding-bottom: 12px !important;
-            margin-bottom: -2px !important;
-            /* Perfectly overlaps the container line */
-            border-bottom: 2px solid transparent !important;
-            transition: all 0.2s ease;
-        }
-
-        .justification-tabs .nav-link:hover {
-            color: #BE9676 !important;
-        }
-
-        /* Active State: Bold Text + Colored Underline */
-        .justification-tabs .nav-link.active {
-            color: #BE9676 !important;
-            font-weight: 700 !important;
-            /* Strong Font Weight */
-            border-bottom: 2px solid #BE9676 !important;
-            /* Branded Active Underline */
-        }
-
-        .terms-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .terms-list li {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            font-size: 14.5px;
-            line-height: 1.7;
-            color: #4A4A4A;
-        }
-
-        .terms-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        .icon-box {
-            background: rgba(190, 150, 118, 0.12);
-            color: #BE9676;
-            min-width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-            margin-top: 2px;
-            font-size: 13px;
-        }
-
-        .icon-box.warning {
-            background: rgba(219, 148, 34, 0.12);
-            color: #db9422;
-        }
-
-        .icon-box.danger {
-            background: rgba(214, 40, 40, 0.1);
-            color: #d62828;
-        }
-
-        .terms-footer-note {
-            font-size: 12px;
-            color: #999;
-            margin-top: 35px;
-            border-top: 1px solid rgba(190, 150, 118, 0.15);
-            padding-top: 20px;
-            margin-bottom: 0;
-            text-align: center;
-        }
-    </style>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {

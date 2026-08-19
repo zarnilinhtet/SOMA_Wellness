@@ -302,7 +302,13 @@ Route::middleware([
     ])->name('workshops.index');
 
 });
+// Class Approval & Cancel
+Route::put('/attendances/class-approve/{classId}', [App\Http\Controllers\AttendanceController::class, 'classApprove'])->name('attendances.classApprove');
+Route::put('/attendances/class-approve-cancel/{classId}', [App\Http\Controllers\AttendanceController::class, 'cancelClassApprove'])->name('attendances.cancelClassApprove');
 
+// Admin Approval & Cancel
+Route::put('/attendances/admin-approve/{instructorId}', [App\Http\Controllers\AttendanceController::class, 'adminApprove'])->name('attendances.adminApprove');
+Route::put('/attendances/admin-approve-cancel/{instructorId}', [App\Http\Controllers\AttendanceController::class, 'cancelAdminApprove'])->name('attendances.cancelAdminApprove');
 
 Route::middleware([
     'auth',

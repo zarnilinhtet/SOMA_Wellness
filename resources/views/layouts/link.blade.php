@@ -9,25 +9,32 @@
 
     <!-- External Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap"
-        rel="stylesheet">
+    
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
     <!-- Styles -->
     <style>
         :root {
-            /* Palette */
-            --soma-cream: #FFF7E9;
-            --soma-beige: #BE9676;
-            --soma-taupe: #8D7E71;
-            --text-dark: #3A332C;
-            --text-light: #F8F5F2;
+            /* Brand Palette */
+            --soma-cream: #FFF7E9;   /* Soft Cream */
+            --soma-beige: #BE9676;   /* Perfect Beige */
+            --soma-taupe: #8D7E71;   /* Desert Taupe */
+            --text-dark: #8D7E71;    /* Mapped to Desert Taupe to unify brand colors */
+            --text-light: #FFF7E9;   /* Mapped to Soft Cream */
+        }
+
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, select, textarea, table, th, td, label, ul, li {
+            font-family: 'Fahkwang', sans-serif !important;
         }
 
         body {
-            font-family: 'Montserrat', sans-serif;
             color: var(--text-dark);
             background-color: #ffffff;
             -webkit-font-smoothing: antialiased;
@@ -268,8 +275,8 @@
 
         /* --- Footer --- */
         .modern-footer {
-            background-color: var(--text-dark);
-            color: var(--text-light);
+            background-color: var(--soma-taupe); /* Deepened to match Desert Taupe brand */
+            color: var(--soma-cream);
             padding: 80px 0 40px;
         }
 
@@ -280,7 +287,7 @@
         }
 
         .footer-link {
-            color: #a9a29c;
+            color: rgba(255, 247, 233, 0.8);
             text-decoration: none;
             transition: color 0.3s ease;
             display: inline-block;
@@ -515,7 +522,7 @@
             <div class="row justify-content-between">
                 <div class="col-lg-4 mb-5 mb-lg-0">
                     <a class="navbar-brand mb-4 d-block" href="#">SOMA</a>
-                    <p class="text-muted pe-lg-5" style="color: #a9a29c !important;">
+                    <p class="pe-lg-5" style="color: rgba(255, 247, 233, 0.8) !important;">
                         Elevating your physical and mental wellbeing through mindful movement and community connection.
                     </p>
                     <div class="social-icons mt-4">
@@ -540,7 +547,7 @@
 
                 <div class="col-lg-3 col-md-6">
                     <h5 class="text-white mb-4" style="font-size: 1.25rem;">Contact</h5>
-                    <ul class="list-unstyled" style="color: #a9a29c;">
+                    <ul class="list-unstyled" style="color: rgba(255, 247, 233, 0.8);">
                         <li class="mb-3">
                             <i class="fas fa-map-marker-alt me-3" style="color: var(--soma-beige);"></i> No.110, 27th
                             Street, Between 76th & 77th, Mandalay, Myanmar
@@ -558,7 +565,7 @@
 
             <div class="row mt-5 pt-4" style="border-top: 1px solid rgba(255,255,255,0.1);">
                 <div class="col-12 text-center">
-                    <p class="mb-2" style="color: #7a736d; font-size: 0.85rem;">
+                    <p class="mb-2" style="color: rgba(255, 247, 233, 0.6); font-size: 0.85rem;">
                         &copy; {{ date('Y') }} SOMA Yoga Management System. Crafted with mindfulness.
                     </p>
                    

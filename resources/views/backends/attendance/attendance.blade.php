@@ -24,31 +24,20 @@
     }
 
     @keyframes slideInRight {
-        from {
-            transform: translateX(110%);
-            opacity: 0;
-        }
-
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+        from { transform: translateX(110%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
 
     @keyframes toastProgress {
-        from {
-            width: 100%;
-        }
-
-        to {
-            width: 0%;
-        }
+        from { width: 100%; }
+        to { width: 0%; }
     }
 
     .flatpickr-calendar {
-        box-shadow: none !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
         border: 1px solid #eee !important;
         margin: 0 auto;
+        border-radius: 12px;
     }
 
     .card {
@@ -59,20 +48,16 @@
         display: none !important;
     }
 
-    /* Style for dates that already have attendance recorded */
     .flatpickr-day.has-recorded-attendance {
         position: relative;
         background-color: #e8f5e9 !important;
-        /* Soft green background */
         color: #1b5e20 !important;
         font-weight: bold;
         border: 1px solid #a5d6a7 !important;
     }
 
-    /* Badge Icon in the corner of recorded days (Checkmark or Cross) */
     .flatpickr-day.has-recorded-attendance::after {
         content: "✓";
-        /* Change to "✕" if you prefer a cross */
         position: absolute;
         top: 1px;
         right: 4px;
@@ -81,317 +66,376 @@
         color: #2e7d32;
     }
 
-    /* Optional: Red styling if using Cross "✕" */
-    /* 
-.flatpickr-day.has-recorded-attendance {
-    background-color: #ffebee !important;
-    color: #c62828 !important;
-    border: 1px solid #ef9a9a !important;
-}
-.flatpickr-day.has-recorded-attendance::after {
-    content: "✕";
-    color: #c62828;
-} 
-*/
+    /* Custom styles for filter UI */
+    .filter-card {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.75rem;
+    }
+    
+    .btn-group .btn {
+        font-weight: 600;
+    }
+
+    /* Fix for Table Dropdown Clipping Issue */
+    .table-responsive {
+        min-height: 350px;
+        padding-bottom: 20px;
+        overflow-x: auto;
+    }
+
+    /* Unified Dropdown Action Styles */
+    .action-dropdown .dropdown-menu {
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+        border: 1px solid #f0f0f0;
+        padding: 0.5rem;
+        z-index: 1050;
+    }
+    
+    .action-dropdown .dropdown-item {
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+    
+    .action-dropdown .dropdown-item:hover {
+        background-color: #f1f5f9;
+        transform: translateX(3px);
+    }
 </style>
 
 <div class="container py-4">
     <div class="page-inner">
-        {{-- Session Success Alert --}}
+        {{-- Session Alerts --}}
         @if (session('success'))
             <div class="alert alert-dismissible fade show shadow-sm border-0 d-flex align-items-center py-2 px-4 rounded-pill m-0 mb-3"
                 role="alert" style="background-color: #e0f8e9; color: #155724;">
-                <i class="fas fa-check-circle me-2" style="font-size: 1.2rem; color: #28a745;"></i>
+                <i class="fas fa-check-circle me-2 fs-5" style="color: #28a745;"></i>
                 <span class="fw-bold">{{ session('success') }}</span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
-        {{-- Session Error Alert --}}
         @if (session('error'))
             <div class="alert alert-dismissible fade show shadow-sm border-0 d-flex align-items-center py-2 px-4 rounded-pill m-0 mb-3"
                 role="alert" style="background-color: #f8d7da; color: #721c24;">
-                <i class="fas fa-exclamation-circle me-2" style="font-size: 1.2rem; color: #dc3545;"></i>
+                <i class="fas fa-exclamation-circle me-2 fs-5" style="color: #dc3545;"></i>
                 <span class="fw-bold">{{ session('error') }}</span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
-        <div class="border-0 rounded-4 card">
-            <div class="card-header bg-white border-0 pt-4 d-flex justify-content-between align-items-center">
-                <h4 class="fw-bold mb-2">Class Attendance Management</h4>
-                <button class="btn btn-dark btn-sm rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal"
+        <div class="border-0 rounded-4 card shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                <h4 class="fw-bold mb-3 mb-md-0 text-dark">
+                    <i class="fas fa-calendar-check me-2 text-primary"></i> Class Attendance Management
+                </h4>
+                {{-- Global Hub Button --}}
+                <button class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold shadow-sm" data-bs-toggle="modal"
                     data-bs-target="#adminReviewAttendanceModal">
-                    <i class="fas fa-clipboard-check me-2"></i> Client Attendance Overview & Check-In
+                    <i class="fas fa-globe me-2"></i> Global Attendance Hub
                 </button>
             </div>
-            <div class="card-body table-responsive p-1" style="max-height: 600px; overflow-y: auto;">
-                <table id="branch-table" class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>No.</th>
-                            <th>Instructor Name</th>
-                            <th>Class Name</th>
-                            <th>Class Date</th>
-                            <th>Class Days</th>
-                            <th>Class Time</th>
-                            <th class="text-center">Action</th>
-                            <th class="w-30">Recorded Approval</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($att as $a)
-                            @php
-                                $now = \Carbon\Carbon::now();
-                                $startDate = \Carbon\Carbon::parse($a->start_date)->startOfDay();
-                                $endDate = \Carbon\Carbon::parse($a->end_date)->endOfDay();
+            
+            <div class="card-body px-4 pt-0">
+                {{-- View Mode Controls (Specific Date vs All Classes) --}}
+                <div class="filter-card p-3 mb-4 mt-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 shadow-sm">
+                    <div class="btn-group shadow-sm" role="group" aria-label="Class View Toggle">
+                        <input type="radio" class="btn-check" name="classViewMode" id="viewDateMode" autocomplete="off" checked>
+                        <label class="btn btn-outline-info px-4" for="viewDateMode">
+                            <i class="fas fa-calendar-day me-2"></i>View by Date
+                        </label>
 
-                                $isWithinDateRange = $now->between($startDate, $endDate);
+                        <input type="radio" class="btn-check" name="classViewMode" id="viewAllMode" autocomplete="off">
+                        <label class="btn btn-outline-info px-4" for="viewAllMode">
+                            <i class="fas fa-list me-2"></i>All Classes
+                        </label>
+                    </div>
 
-                                // 1. Create Carbon instances for start and end times on today's date context
-                                $startTime = \Carbon\Carbon::today()->setTimeFromTimeString($a->start_time);
-                                $endTime = \Carbon\Carbon::today()->setTimeFromTimeString($a->end_time);
+                    <div id="mainTableDateContainer" class="d-flex align-items-center bg-white p-2 rounded-pill shadow-sm border" style="min-width: 250px;">
+                        <span class="px-3 text-muted fw-bold small"><i class="fas fa-calendar-alt"></i> Selected Date:</span>
+                        <input type="date" id="mainTableDateFilter" class="form-control form-control-sm border-0 fw-bold text-primary bg-transparent w-auto" value="{{ \Carbon\Carbon::now('Asia/Yangon')->format('Y-m-d') }}">
+                    </div>
+                </div>
 
-                                // 2. Apply 30-minute buffers safely
-                                $startTimeWithBuffer = $startTime->copy()->subMinutes(30);
-                                $endTimeWithBuffer = $endTime;
+                @php
+                    // Pre-fetch today's attendances to include Substitutes in Class Completion column
+                    $todayDateBlade = \Carbon\Carbon::now('Asia/Yangon')->format('Y-m-d');
+                    $classIds = collect($att)->pluck('id')->toArray();
+                    $actualAttendancesToday = \App\Models\Attendance::with('instructor.user')
+                        ->whereIn('class_id', $classIds)
+                        ->whereDate('attendance_date', $todayDateBlade)
+                        ->whereNull('client_id')
+                        ->get()
+                        ->groupBy('class_id');
+                @endphp
 
-                                // 3. Format everything strictly in 24-hour time strings (H:i:s) for comparison
-                                $currentTimeOnly = $now->format('H:i:s');
-                                $startTimeStr = $startTimeWithBuffer->format('H:i:s');
-                                $endTimeStr = $endTimeWithBuffer->format('H:i:s');
-
-                                // 4. Compare strings directly in 24-hour format
-                                $isWithinTimeBuffer = ($currentTimeOnly >= $startTimeStr && $currentTimeOnly <= $endTimeStr);
-                                $isClickable = $isWithinDateRange && $isWithinTimeBuffer;
-
-                                \Illuminate\Support\Facades\Log::info("Class ID {$a->id} Debug (24hr):", [
-                                    'current_time' => $currentTimeOnly,
-                                    'start_buffer' => $startTimeStr,
-                                    'end_buffer' => $endTimeStr,
-                                    'isWithinTimeBuffer' => $isWithinTimeBuffer,
-                                    'isWithinDateRange' => $isWithinDateRange,
-                                    'isClickable' => $isClickable
-                                ]);
-                            @endphp
-
+                <div class="table-responsive">
+                    <table id="branch-table" class="table table-hover align-middle">
+                        <thead class="table-light shadow-sm">
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td class="fw-bold">
+                                <th style="min-width: 50px;">No.</th>
+                                <th style="min-width: 150px;">Assigned Instructors</th>
+                                <th style="min-width: 180px;">Class Name</th>
+                                <th style="min-width: 140px;">Class Date</th>
+                                <th style="min-width: 120px;">Class Time</th>
+                                <th style="min-width: 150px;" class="text-center">Manage Attendance</th>
+                                <th style="min-width: 180px;" class="text-center">Approval Progress</th>
+                                <th style="min-width: 180px;">Class Completion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($att as $a)
+                                @php
+                                    $yangonNow = \Carbon\Carbon::now('Asia/Yangon');
 
-                                    @foreach ($a->instructor as $inst)
-                                        <span class="badge bg-info text-white me-1 mb-1">
-                                            {{ $inst['user']['name'] ?? 'N/A' }}
-                                        </span>
-                                    @endforeach
-                                </td>
-                                <td><span class="fw-bold d-block">{{ $a->class_name }}</span></td>
-                                <td>
-                                    <span class="d-block text-primary" style="font-size: 0.9rem;">
-                                        {{ \Carbon\Carbon::parse($a->start_date)->format('d M Y') }} <br>
-                                        <span class="text-muted text-center d-block">to</span>
-                                        {{ \Carbon\Carbon::parse($a->end_date)->format('d M Y') }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <!-- Display class days -->
-                                    @if(!empty($a->days) && is_array($a->days))
-                                        @foreach($a->days as $day)
-                                            <span class="badge bg-secondary text-white me-1 mb-1">{{ $day }}</span>
+                                    // Check Data for Javascript Filtering
+                                    $rawStartDate = \Carbon\Carbon::parse($a->start_date)->format('Y-m-d');
+                                    $rawEndDate = $a->end_date ? \Carbon\Carbon::parse($a->end_date)->format('Y-m-d') : '2099-12-31';
+
+                                    $classEndDateTimeStr = $yangonNow->format('Y-m-d') . ' ' . ($a->end_time ?? '23:59:59');
+                                    $classEndDateTime = \Carbon\Carbon::parse($classEndDateTimeStr, 'Asia/Yangon');
+                                    $hasEnded = $yangonNow->greaterThanOrEqualTo($classEndDateTime);
+
+                                    $classApproved = \App\Models\Attendance::where('class_id', $a->id)
+                                                        ->whereDate('attendance_date', $todayDateBlade)
+                                                        ->where('class_approve', 1)
+                                                        ->exists();
+
+                                    // Merge Assigned Instructors with Actual Check-ins (Substitutes) for Display
+                                    $todaysAttendances = $actualAttendancesToday->get($a->id) ?? collect();
+                                    $displayInstructors = [];
+                                    $assignedIdsArray = is_string($a->instructor_ids) ? json_decode($a->instructor_ids, true) : ($a->instructor_ids ?? []);
+
+                                    // 1. Add actual checked-in instructors (Assigned or Substitutes)
+                                    foreach($todaysAttendances as $attRecord) {
+                                        $isAssigned = in_array($attRecord->instructor_id, $assignedIdsArray);
+                                        $displayInstructors[$attRecord->instructor_id] = [
+                                            'instructor_id' => $attRecord->instructor_id,
+                                            'name' => $attRecord->instructor->user->name ?? 'Unknown',
+                                            'is_substitute' => !$isAssigned,
+                                            'admin_approve' => $attRecord->admin_approve,
+                                            'attended' => $attRecord->attended,
+                                        ];
+                                    }
+
+                                    // 2. Add assigned instructors who HAVEN'T checked in yet
+                                    foreach($a->instructor as $assignedInst) {
+                                        if(!isset($displayInstructors[$assignedInst['id']])) {
+                                            $displayInstructors[$assignedInst['id']] = [
+                                                'instructor_id' => $assignedInst['id'],
+                                                'name' => $assignedInst['user']['name'] ?? 'Unknown',
+                                                'is_substitute' => false,
+                                                'admin_approve' => 0,
+                                                'attended' => 0,
+                                            ];
+                                        }
+                                    }
+                                @endphp
+
+                                <tr class="main-class-row" 
+                                    data-start-date="{{ $rawStartDate }}" 
+                                    data-end-date="{{ $rawEndDate }}" 
+                                    data-days="{{ json_encode($a->days ?? []) }}">
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td class="fw-bold">
+                                        @foreach ($a->instructor as $inst)
+                                            <span class="badge bg-info text-white me-1 mb-1 shadow-sm px-2 py-1">
+                                                <i class="fas fa-user me-1"></i> {{ $inst['user']['name'] ?? 'N/A' }}
+                                            </span>
                                         @endforeach
-                                    @else
-                                        <span class="text-muted small">No scheduled days</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <!-- Updated to 24-hour format (H:i) -->
-                                    <small class="text-dark fw-bold">
-                                        {{ \Carbon\Carbon::parse($a->start_time)->format('H:i') }} -
-                                        {{ \Carbon\Carbon::parse($a->end_time)->format('H:i') }}
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    @if(!empty($a->instructor) && count($a->instructor) > 0)
-                                        @php
-                                            $loggedInInstructorModel = App\Models\Instructor::where('instructor_id', auth()->id())->first();
-                                            $loggedInInstructorId = $loggedInInstructorModel ? $loggedInInstructorModel->id : null;
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold d-block text-dark">{{ $a->class_name }}</span>
+                                        <div class="mt-1">
+                                            @if(!empty($a->days) && is_array($a->days))
+                                                @foreach($a->days as $day)
+                                                    <span class="badge bg-light text-secondary border me-1 mb-1" style="font-size: 0.7rem;">{{ $day }}</span>
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column" style="font-size: 0.85rem;">
+                                            <span class="text-success fw-bold"><i class="fas fa-play-circle me-1"></i> {{ \Carbon\Carbon::parse($a->start_date)->format('d M Y') }}</span>
+                                            <span class="text-danger fw-bold mt-1"><i class="fas fa-stop-circle me-1"></i> {{ $a->end_date ? \Carbon\Carbon::parse($a->end_date)->format('d M Y') : 'Ongoing' }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-dark fw-bold" style="font-size: 0.85rem; background: #f8f9fa; padding: 6px 10px; border-radius: 8px; border: 1px solid #e9ecef; display: inline-block;">
+                                            <i class="far fa-clock text-primary me-1"></i> 
+                                            {{ \Carbon\Carbon::parse($a->start_time)->format('h:i A') }} <br>
+                                            <span class="text-muted" style="font-size: 0.75rem; margin-left: 18px;">to {{ \Carbon\Carbon::parse($a->end_time)->format('h:i A') }}</span>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="text-center">
+                                        <div class="dropdown action-dropdown">
+                                            <button class="btn btn-dark btn-sm px-3 dropdown-toggle rounded-pill shadow-sm fw-bold w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-tasks me-1"></i> Manage
+                                            </button>
+                                            
+                                            <ul class="dropdown-menu shadow-lg border-0 p-2 mt-1" style="min-width: 250px;">
+                                                <!-- Section: Instructor Check-In -->
+                                                <li class="dropdown-header text-uppercase fw-bold text-primary px-3 mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                                    <i class="fas fa-chalkboard-teacher me-1"></i> Instructor Actions
+                                                </li>
+                                                
+                                                <li>
+                                                    <a class="dropdown-item py-2 d-flex align-items-center openInstructorModal px-3" href="#"
+                                                        data-schedule-id="{{ $a->id }}"
+                                                        data-class-days="{{ json_encode($a->days) }}"
+                                                        data-start-date="{{ $a->start_date }}"
+                                                        data-end-date="{{ $a->end_date }}"
+                                                        data-instructor-id="{{ !empty($a->instructor) ? $a->instructor[0]['id'] : '' }}">
+                                                        <i class="fas fa-user-check me-2 text-success"></i> 
+                                                        <span class="fw-medium">Record / Substitute</span>
+                                                    </a>
+                                                </li>
 
-                                            // Check if this instructor already recorded attendance for today on this class
-                                            $alreadyRecordedToday = false;
-                                            if ($loggedInInstructorId && isset($record) && is_iterable($record)) {
-                                                foreach ($record as $rec) {
-                                                    if (
-                                                        (string) $rec->class_id === (string) $a->id &&
-                                                        (string) $rec->instructor_id === (string) $loggedInInstructorId &&
-                                                        $rec->attendance_date === date('Y-m-d') &&
-                                                        !$rec->client_id
-                                                    ) {
-                                                        $alreadyRecordedToday = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        @endphp
-
-                                        @if (auth()->user()->hasRole("Instructor"))
-
-                                            <div class="dropdown">
-                                                <button class="btn btn-primary btn-sm px-3 dropdown-toggle rounded-pill"
-                                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Record Instructor
-                                                </button>
-                                                <ul class="dropdown-menu shadow border-0 p-2">
-                                                    <li>
-                                                        <a class="dropdown-item rounded openInstructorModal py-2" href="#"
-                                                            data-schedule-id="{{ $a->id }}"
-                                                            data-class-days="{{ json_encode($a->days) }}"
-                                                            data-start-date="{{ $a->start_date }}"
-                                                            data-end-date="{{ $a->end_date }}"
-                                                            data-instructor-id="{{ $loggedInInstructorId ?? '' }}"
-                                                            data-instructor-name="{{ $loggedInInstructorModel->user['name'] ?? 'Instructor' }}">
-                                                            <i class="fas fa-user-check me-2 text-primary"></i>
-                                                            {{ $loggedInInstructorModel->user['name'] ?? 'N/A' }}
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                            <!-- @if($isClickable) -->
-                                            <!-- @else
-                                                                                                                                    <button class="btn btn-secondary btn-sm px-3 rounded-pill" type="button" disabled
-                                                                                                                                        title="Available 30 mins before start time and up to 30 mins after end time.">
-                                                                                                                                        Locked Time
-                                                                                                                                    </button>
-                                                                                                                                @endif -->
+                                                <li><hr class="dropdown-divider my-2 mx-2"></li>
+                                                
+                                                <!-- Section: Student Check-In -->
+                                                <li class="dropdown-header text-uppercase fw-bold text-info px-3 mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                                    <i class="fas fa-user-graduate me-1"></i> Student Actions
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item py-2 d-flex align-items-center openStudentCheckinModal px-3" style="background-color: #f8f9fa;" href="#" data-class-id="{{ $a->id }}">
+                                                        <i class="fas fa-users-cog me-2 text-primary"></i> 
+                                                        <span class="fw-bold text-dark">Manage Students</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="text-center">
+                                        @if(!auth()->user()->hasRole("Instructor"))
+                                            @if($classApproved)
+                                                <span class="badge bg-success-subtle text-success border border-success d-block mb-1 px-3 py-2 rounded-pill"><i class="fas fa-check-double me-1"></i> Attendance Approved</span>
+                                                <form action="{{ route('attendances.cancelClassApprove', $a->id) }}" method="POST" class="d-inline-block w-100 mt-1">
+                                                    @csrf @method('PUT')
+                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100 rounded-pill btn-confirm-action" data-message="Are you sure you want to CANCEL this Class Attendance Approval?">
+                                                        <i class="fas fa-times me-1"></i> Cancel Approval
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <form action="{{ route('attendances.classApprove', $a->id) }}" method="POST" class="d-inline-block w-100">
+                                                    @csrf @method('PUT')
+                                                    <button type="button" class="btn btn-success btn-sm w-100 shadow-sm rounded-pill btn-confirm-action" data-message="Are you sure you want to approve attendance for this class?">
+                                                        <i class="fas fa-stamp me-1"></i> Approve Attendance
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @else
-                                            <!-- {{ $isClickable ? '' : 'disabled' }} -->
-                                            <div class="dropdown">
-                                                <button class="btn btn-primary btn-sm px-3 dropdown-toggle rounded-pill"
-                                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Record Instructor
-                                                </button>
-                                                <ul class="dropdown-menu shadow border-0 p-2">
-                                                    @foreach ($a->instructor as $inst)
-                                                        <li>
-                                                            <a class="dropdown-item rounded openInstructorModal py-2" href="#"
-                                                                data-schedule-id="{{ $a->id }}" data-instructor-id="{{ $inst['id'] }}"
-                                                                data-instructor-name="{{ $inst['user']['name'] ?? 'Instructor' }}"
-                                                                data-start-date="{{ $a->start_date }}"
-                                                                data-end-date="{{ $a->end_date }}"
-                                                                data-class-days="{{ json_encode($a->days) }}">
-                                                                <i class="fas fa-user-check me-2 text-primary"></i>
-                                                                {{ $inst['user']['name'] ?? 'N/A' }}
-                                                            </a>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
+                                            @if($classApproved)
+                                                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill border border-success"><i class="fas fa-check-circle me-1"></i> Approved</span>
+                                            @else
+                                                <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill border border-warning"><i class="fas fa-hourglass-half me-1"></i> Pending Admin</span>
+                                            @endif
                                         @endif
-                                    @else
-                                        <span class="badge bg-secondary">N/A</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    {{-- Unified approval/status section visible to both admin and instructors --}}
-                                    <div class="w-100">
-                                        @if(auth()->user()->hasRole("Instructor"))
-                                            @php
-                                                $attdItem = collect($a->instructor)->filter(function ($instructor) {
-                                                    return $instructor['instructor_id'] === auth()->id();
-                                                })->first();
-                                                Illuminate\Support\Facades\Log::info(" Approval Debug for Class ID {$a->id}:", [
-                                                    'instructor_id' => auth()->id(),
-                                                    'attendance_record' => $attdItem['attendance']['attended'] ?? null,
-                                                ]);
+                                    </td>
 
-                                                $isAdminApproved = ($attdItem['attendance']['admin_approve'] ?? 0) == 1 && ($attdItem['attendance']['attended'] ?? 0) == 1;
-                                                $isPendingApproval = ($attdItem['attendance']['admin_approve'] ?? 0) == 0 && ($attdItem['attendance']['attended'] ?? 0) == 1;
-                                                Illuminate\Support\Facades\Log::info("Instructor Approval Debug for Class ID {$a->id}:", [
-                                                    'instructor_id' => auth()->id(),
-                                                    'attendance_record' => $attdItem['attendance']['attended'] ?? null,
-                                                    'isAdminApproved' => $isAdminApproved,
-                                                    'isPendingApproval' => $isPendingApproval
-                                                ]);
-                                            @endphp
-
-                                            <div class="mb-2">
-                                                {{ $attdItem['user']['name'] ?? 'N/A' }}
-
-                                                @if($isAdminApproved)
-                                                    Recorded: <span class="badge bg-success">Approved</span>
-                                                @elseif($isPendingApproval)
-                                                    Recorded:
-
-                                                    <span type="submit" class="badge bg-warning">
-                                                        Waiting For admin Approve</span>
-
-                                                @else
-                                                    <span class="badge bg-secondary">Not Recorded</span>
-                                                @endif
-                                            </div>
-                                        @else
-                                            @foreach ($a['instructor'] as $attdItem)
+                                    <td>
+                                        <div class="w-100 bg-white rounded-3 p-2 border shadow-sm">
+                                            @foreach ($displayInstructors as $dInst)
                                                 @php
-                                                    $isAdminApproved = ($attdItem['attendance']['admin_approve'] ?? 0) == 1 && ($attdItem['attendance']['attended'] ?? 0) == 1;
-                                                    $isPendingApproval = ($attdItem['attendance']['admin_approve'] ?? 0) == 0 && ($attdItem['attendance']['attended'] ?? 0) == 1;
+                                                    $isAdminApproved = ($dInst['admin_approve'] == 1) && ($dInst['attended'] == 1);
+                                                    $isPendingApproval = ($dInst['admin_approve'] == 0) && ($dInst['attended'] == 1);
                                                 @endphp
 
-                                                <div class="mb-2">
-                                                    {{ $attdItem['user']['name'] ?? 'N/A' }}
-
+                                                <div class="mb-2 {{ !$loop->last ? 'border-bottom pb-2' : '' }}">
+                                                    <div class="mb-1 fw-bold text-dark" style="font-size: 0.85rem;">
+                                                        <i class="fas fa-chalkboard-teacher text-primary opacity-50 me-1"></i> 
+                                                        {{ $dInst['name'] }}
+                                                        @if($dInst['is_substitute'])
+                                                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">Substitute</span>
+                                                        @endif
+                                                    </div>
+                                                    
                                                     @if($isAdminApproved)
-                                                        Recorded: <span class="badge bg-success">Approved</span>
+                                                         <span class="badge bg-success mb-1 px-2 py-1"><i class="fas fa-check-circle me-1"></i> Completed</span>
+                                                         
+                                                         @if(!auth()->user()->hasRole("Instructor"))
+                                                         <form action="{{ route('attendances.cancelAdminApprove', $dInst['instructor_id']) }}" method="POST" class="d-inline-block ms-1">
+                                                             @csrf @method('PUT')
+                                                             <input type="hidden" name="class_id" value="{{ $a->id }}">
+                                                             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 btn-confirm-action" data-message="Are you sure you want to CANCEL this completion approval?">
+                                                                Cancel
+                                                             </button>
+                                                         </form>
+                                                         @endif
+
                                                     @elseif($isPendingApproval)
-                                                        Recorded:
-                                                        <form action="{{ route('attendances.adminApprove', $attdItem['id']) }}"
-                                                            method="POST" class="d-inline-block ms-1">
-                                                            @csrf
-                                                            @method('PUT')
-                                                            <input type="hidden" name="class_id" value="{{ $a['id'] }}">
-                                                            <button type="submit" class="btn btn-sm btn-success">
-                                                                Approve
-                                                            </button>
-                                                        </form>
+                                                        @if($hasEnded)
+                                                            @if(!auth()->user()->hasRole("Instructor"))
+                                                            <form action="{{ route('attendances.adminApprove', $dInst['instructor_id']) }}" method="POST" class="d-inline-block">
+                                                                @csrf @method('PUT')
+                                                                <input type="hidden" name="class_id" value="{{ $a->id }}">
+                                                                <button type="button" class="btn btn-sm btn-success py-1 px-3 shadow-sm rounded-pill btn-confirm-action" data-message="Are you sure you want to approve this instructor's completion?">
+                                                                   Approve Completion
+                                                                </button>
+                                                            </form>
+                                                            @else
+                                                                <span class="badge bg-warning text-dark"><i class="fas fa-spinner fa-spin me-1"></i> Wait for Admin</span>
+                                                            @endif
+                                                        @else
+                                                            <span class="badge bg-warning text-dark px-2 py-1" title="Available after {{ $classEndDateTime->format('h:i A') }}">
+                                                                <i class="fas fa-clock me-1"></i> Wait for Class End
+                                                            </span>
+                                                        @endif
                                                     @else
-                                                        <span class="badge bg-secondary">Not Recorded</span>
+                                                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.75rem;">Not Recorded</span>
                                                     @endif
                                                 </div>
                                             @endforeach
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-{{-- ==================== INSTRUCTOR ATTENDANCE MODAL ==================== --}}
-<div class="modal fade" id="instructorAttendanceModal" tabindex="-1">
+{{-- ==================== INSTRUCTOR ATTENDANCE MODAL (With Substitute Selection) ==================== --}}
+@php
+    $allSystemInstructors = \App\Models\Instructor::with('user')->get();
+@endphp
+
+<div class="modal fade" id="instructorAttendanceModal" tabindex="-1" aria-labelledby="instructorModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form id="instructorAttendanceForm" method="POST" action="{{ route('attendances.inTime') }}"
-            class="modal-content border-0 shadow">
+            class="modal-content border-0 shadow-lg rounded-4">
             @csrf
-            <div class="modal-header bg-light border-0">
-                <h5 class="modal-title fw-bold" id="instructorModalTitle">Record Instructor Attendance</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-light border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="instructorModalTitle"><i class="fas fa-chalkboard-teacher text-primary me-2"></i> Record Instructor Attendance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
+            <div class="modal-body text-center p-4">
                 <input type="hidden" name="class_id" id="instructor_schedule_id">
-                <input type="hidden" name="instructor_id" id="instructor_id_input">
 
-                <div class="alert alert-info py-2 mb-3 text-start small border-0 shadow-sm" id="instructorNameDisplay">
-                    <strong>Instructor:</strong> <span id="selectedInstructorNameText"></span>
+                {{-- DYNAMIC INSTRUCTOR SELECTION (Assigned vs Substitute) --}}
+                <div class="mb-4 text-start p-3 bg-light rounded-3 border">
+                    <label class="form-label fw-bold text-dark mb-2"><i class="fas fa-user-tie text-primary me-1"></i> Select Teaching Instructor:</label>
+                    <select name="instructor_id" id="instructor_id_input" class="form-select shadow-sm fw-bold" required>
+                        <!-- Options populated dynamically via JS -->
+                    </select>
+                    <small class="text-muted d-block mt-2" style="font-size: 0.8rem;">
+                        <i class="fas fa-info-circle me-1 text-info"></i> Default is assigned instructor. Change this if a substitute teacher is taking the class today.
+                    </small>
                 </div>
 
-                {{-- Inline Flatpickr Container --}}
                 <div id="instructor-inline-picker" class="mx-auto" style="pointer-events: none;"></div>
 
                 <input type="hidden" name="attendance_date" id="instructor_attendance_date" required>
             </div>
-            <div class="modal-footer border-0">
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill">
-                    Confirm Instructor Attendance
+            <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill shadow-sm fs-6">
+                    <i class="fas fa-check-circle me-1"></i> Confirm Attendance
                 </button>
             </div>
         </form>
@@ -399,61 +443,22 @@
 </div>
 
 {{-- ==================== ADMIN CLIENT OVERVIEW & CHECK-IN MODAL ==================== --}}
-<div class="modal fade" id="adminReviewAttendanceModal" tabindex="-1">
+<div class="modal fade" id="adminReviewAttendanceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light border-0">
-                <h5 class="modal-title fw-bold"><i class="fas fa-user-graduate me-2 text-success"></i> Student
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-light border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-graduate me-2 text-primary"></i> Student
                     Attendance Manager & Check-In Hub</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="flash-alerts"
-                    style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 320px; max-width: 420px;">
-                    {{-- Session Success Alert --}}
-                    @if (session('success'))
-                        <div
-                            class="custom-toast success-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
-                            <div class="d-flex align-items-center">
-                                <div class="icon-shape bg-success text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
-                                    style="width: 38px; height: 38px; flex-shrink: 0;">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">Success</h6>
-                                    <small class="text-muted">{!! session('success') !!}</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close ms-3"
-                                onclick="$(this).closest('.custom-toast').fadeOut()" aria-label="Close"></button>
-                            <div class="toast-progress bg-success"></div>
-                        </div>
-                    @endif
-
-                    {{-- Session Error Alert --}}
-                    @if (session('error'))
-                        <div
-                            class="custom-toast error-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
-                            <div class="d-flex align-items-center">
-                                <div class="icon-shape bg-danger text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
-                                    style="width: 38px; height: 38px; flex-shrink: 0;">
-                                    <i class="fas fa-exclamation"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">Error</h6>
-                                    <small class="text-muted">{!! session('error') !!}</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close ms-3"
-                                onclick="$(this).closest('.custom-toast').fadeOut()" aria-label="Close"></button>
-                            <div class="toast-progress bg-danger"></div>
-                        </div>
-                    @endif
+            <div class="modal-body bg-light pt-4">
+                <div id="flash-alerts" style="position: absolute; top: 20px; right: 20px; z-index: 9999; min-width: 320px; max-width: 420px;">
                 </div>
-                <div class="row g-3 mb-4">
+                
+                <div class="row g-3 mb-4 bg-white p-4 rounded-4 shadow-sm border">
                     <div class="col-12">
-                        <label class="form-label small fw-bold">Select Class:</label>
-                        <select id="auditClassSelect" class="form-select shadow-sm">
+                        <label class="form-label small fw-bold text-muted"><i class="fas fa-chalkboard me-1"></i> Selected Class:</label>
+                        <select id="auditClassSelect" class="form-select border-primary shadow-sm fw-bold text-dark py-2">
                             <option value="">-- Choose Class Schedule --</option>
                             @foreach($att as $a)
                                 @php
@@ -462,20 +467,33 @@
                                     $currentInstructorUserId = auth()->id();
                                     $belongsToInstructor = false;
 
-                                    if ($isInstructorUser && !empty($a->instructor)) {
-                                        $instructors = $a->instructor;
-                                        if (is_string($instructors)) {
-                                            $instructors = json_decode($instructors, true);
+                                    if ($isInstructorUser) {
+                                        // Condition 1: Check if this logged-in instructor is explicitly assigned to this class
+                                        if (!empty($a->instructor)) {
+                                            $instructors = $a->instructor;
+                                            if (is_string($instructors)) {
+                                                $instructors = json_decode($instructors, true);
+                                            }
+                                            if ($instructors instanceof \Illuminate\Support\Collection) {
+                                                $instructors = $instructors->toArray();
+                                            }
+                                            if (is_array($instructors)) {
+                                                foreach ($instructors as $insItem) {
+                                                    $userId = is_array($insItem) ? ($insItem['user']['id'] ?? ($insItem['user_id'] ?? null)) : ($insItem->user->id ?? null);
+                                                    if ($userId == $currentInstructorUserId) {
+                                                        $belongsToInstructor = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                         }
-                                        if ($instructors instanceof \Illuminate\Support\Collection) {
-                                            $instructors = $instructors->toArray();
-                                        }
-                                        if (is_array($instructors)) {
-                                            foreach ($instructors as $insItem) {
-                                                $insId = is_array($insItem) ? ($insItem['instructor_id'] ?? null) : ($insItem->instructor_id ?? null);
-                                                $userId = is_array($insItem) ? ($insItem['user']['id'] ?? ($insItem['user_id'] ?? null)) : ($insItem->user->id ?? null);
 
-                                                if ($insId == $currentInstructorUserId || $userId == $currentInstructorUserId) {
+                                        // Condition 2: NEW ADDITION -> Check if the logged in instructor has Substitute Attendance today for this class
+                                        if (!$belongsToInstructor) {
+                                            $todaysAttendancesForThisClass = $actualAttendancesToday->get($a->id) ?? collect();
+                                            foreach($todaysAttendancesForThisClass as $attRecord) {
+                                                $subUserId = $attRecord->instructor->user->id ?? ($attRecord->instructor->user_id ?? null);
+                                                if ($subUserId == $currentInstructorUserId) {
                                                     $belongsToInstructor = true;
                                                     break;
                                                 }
@@ -491,27 +509,25 @@
                                         data-days='@json($a->days)'>
                                         {{ $a->class_name }} ({{ \Carbon\Carbon::parse($a->start_date)->format('d M') }} -
                                         {{ \Carbon\Carbon::parse($a->end_date)->format('d M') }} |
-                                        {{ \Carbon\Carbon::parse($a->start_time)->format('H:i') }} -
-                                        {{ \Carbon\Carbon::parse($a->end_time)->format('H:i') }}) |
-                                        {{ $a->days ? implode(', ', $a->days) : 'No Days Set' }}
+                                        {{ \Carbon\Carbon::parse($a->start_time)->format('h:i A') }} -
+                                        {{ \Carbon\Carbon::parse($a->end_time)->format('h:i A') }})
                                     </option>
                                 @endif
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Select Date:</label>
-                        <input type="date" id="auditDateSelect" class="form-control shadow-sm"
+                    <div class="col-md-6 mt-3">
+                        <label class="form-label small fw-bold text-muted"><i class="far fa-calendar-alt me-1"></i> Filter Date:</label>
+                        <input type="date" id="auditDateSelect" class="form-control shadow-sm py-2 text-primary fw-bold"
                             value="{{ date('Y-m-d') }}">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold">Search Student Name:</label>
-                        <input type="text" id="auditSearchInput" class="form-control shadow-sm"
+                    <div class="col-md-6 mt-3">
+                        <label class="form-label small fw-bold text-muted"><i class="fas fa-search me-1"></i> Search Student:</label>
+                        <input type="text" id="auditSearchInput" class="form-control shadow-sm py-2"
                             placeholder="Type student name to filter...">
                     </div>
                 </div>
 
-                {{-- Hidden Form to Submit Quick Individual Check-ins --}}
                 <form id="quickCheckInForm" method="POST" action="{{ route('attendances.ClientinTime') }}">
                     @csrf
                     <input type="hidden" name="class_id" id="quick_class_id">
@@ -519,28 +535,30 @@
                     <input type="hidden" name="client_ids[]" id="quick_client_id">
                 </form>
 
-                {{-- Student Audit Result Table --}}
-                <div class="table-responsive border rounded-3 bg-white shadow-sm"
+                <div class="table-responsive border rounded-4 bg-white shadow-sm"
                     style="max-height: 420px; overflow-y: auto;">
                     <table class="table table-hover align-middle mb-0" id="auditResultTable">
                         <thead class="table-light sticky-top">
                             <tr>
-                                <th>Student Name</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-end">Action / Quick Check-In</th>
+                                <th class="ps-4 py-3 text-uppercase text-secondary" style="font-size: 0.8rem;">Student Name</th>
+                                <th class="text-center py-3 text-uppercase text-secondary" style="font-size: 0.8rem;">Booked Date</th>
+                                <th class="text-center py-3 text-uppercase text-secondary" style="font-size: 0.8rem;">Status</th>
+                                <th class="text-end pe-4 py-3 text-uppercase text-secondary" style="font-size: 0.8rem;">Action / Check-In</th>
                             </tr>
                         </thead>
                         <tbody id="auditTableBody">
                             <tr>
-                                <td colspan="3" class="text-center text-muted py-5">Please select a class schedule above
-                                    to manage student attendance records.</td>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox d-block fs-1 mb-3 text-secondary opacity-50"></i>
+                                    Please select a class schedule above to manage student attendance records.
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 bg-white rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4 shadow-sm fw-bold" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -553,92 +571,132 @@
 
 <script>
     $(document).ready(function () {
-        // ----------------------------------------------------
-        // 1. Data Initialization & Setup
-        // ----------------------------------------------------
-        if ($.fn.DataTable.isDataTable('#branch-table')) {
-            $('#branch-table').DataTable().destroy();
-        }
-        $('#branch-table').DataTable();
-
-        // Pass data sets from Blade
+        // ==========================
+        // Variables & Init Data
+        // ==========================
         let allInstructorRecords = @json($instructorRecord ?? ($record ?? []));
         let allClientRecords = @json($record ?? []);
-        @php
-            $clientsMaster = App\Models\Booking::with('bookingUser')->get();
-        @endphp
+        @php $clientsMaster = App\Models\Booking::with('bookingUser')->get(); @endphp
         const allClientsMaster = @json($clientsMaster ?? []);
+        const allSystemInstructors = @json($allSystemInstructors ?? []);
 
         const todayStr = flatpickr.formatDate(new Date(), "Y-m-d");
-
         const dayMap = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
         const fullDayMap = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
 
-        // Helper: Show Feedback Alert Message inside Audit Container
-        function showAuditAlert(message, type = 'success') {
-            const alertBox = $('#auditAlertContainer');
-            if (alertBox.length) {
-                alertBox.html(`
-                <div class="alert alert-${type} alert-dismissible fade show shadow-sm py-2 px-3 small mb-3" role="alert">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
-                    ${message}
-                    <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `);
-                // Auto dismiss after 4 seconds
-                setTimeout(() => {
-                    alertBox.find('.alert').fadeOut('slow', function () { $(this).remove(); });
-                }, 4000);
-            } else {
-                alert(message);
-            }
-        }
-
-        // Helper: Check if a date string falls on a class day
+        // Helper Functions 
         function isDateOnClassDay(dateStr, classDaysArray) {
             if (!classDaysArray || classDaysArray.length === 0) return true;
-
             const parts = dateStr.split('-');
             const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
             const dayNum = targetDate.getDay();
-
             const shortName = dayMap[dayNum].toLowerCase();
             const fullName = fullDayMap[dayNum].toLowerCase();
-
             const normalizedDays = classDaysArray.map(d => String(d).toLowerCase().trim());
-
-            return normalizedDays.includes(String(dayNum)) ||
-                normalizedDays.includes(shortName) ||
-                normalizedDays.includes(fullName);
+            return normalizedDays.includes(String(dayNum)) || normalizedDays.includes(shortName) || normalizedDays.includes(fullName);
         }
 
-        // Helper: Check if current time is within 30 minutes before start time and 30 minutes after end time
+        // ==========================
+        // DataTable & Custom View Filters
+        // ==========================
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
+            if (settings.nTable.id !== 'branch-table') return true;
+            
+            let viewMode = $('input[name="classViewMode"]:checked').attr('id');
+            if (viewMode === 'viewAllMode') return true;
+
+            let filterDateStr = $('#mainTableDateFilter').val();
+            if (!filterDateStr) return true;
+
+            let $row = $(settings.aoData[dataIndex].nTr);
+            let startDate = $row.attr('data-start-date');
+            let endDate = $row.attr('data-end-date');
+            let daysRaw = $row.attr('data-days');
+            
+            if (filterDateStr < startDate || filterDateStr > endDate) return false;
+
+            let daysArray = [];
+            try { daysArray = JSON.parse(daysRaw); } catch(e) {}
+            
+            return isDateOnClassDay(filterDateStr, daysArray);
+        });
+
+        if ($.fn.DataTable.isDataTable('#branch-table')) {
+            $('#branch-table').DataTable().destroy();
+        }
+        
+        let branchTable = $('#branch-table').DataTable({
+            order: [], 
+            language: {
+                emptyTable: "No classes found for the selected view or date."
+            }
+        });
+
+        $('input[name="classViewMode"], #mainTableDateFilter').on('change', function() {
+            if ($('#viewAllMode').is(':checked')) {
+                $('#mainTableDateContainer').slideUp('fast'); 
+            } else {
+                $('#mainTableDateContainer').slideDown('fast'); 
+            }
+            branchTable.draw(); 
+        });
+
+        branchTable.draw();
+
+        // ==========================
+        // General Utility Interactions
+        // ==========================
+        $(document).on('click', '.btn-confirm-action', function(e) {
+            e.preventDefault();
+            let form = $(this).closest('form');
+            let message = $(this).data('message') || 'Are you sure you want to proceed?';
+            if(confirm(message)) { form.submit(); }
+        });
+
+        function showAuditAlert(message, type = 'success') {
+            const isSuccess = type === 'success';
+            const iconClass = isSuccess ? 'fa-check' : 'fa-exclamation';
+            const bgClass = isSuccess ? 'bg-success' : 'bg-danger';
+            const title = isSuccess ? 'Success' : 'Error';
+
+            const toastHtml = `
+                <div class="custom-toast ${type}-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-shape ${bgClass} text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; flex-shrink: 0;">
+                            <i class="fas ${iconClass}"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">${title}</h6>
+                            <small class="text-secondary">${message}</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close ms-3" onclick="$(this).closest('.custom-toast').fadeOut('fast', function(){ $(this).remove(); })"></button>
+                    <div class="toast-progress ${bgClass}"></div>
+                </div>
+            `;
+            const $toast = $(toastHtml).appendTo('#flash-alerts');
+            setTimeout(() => { $toast.fadeOut('slow', function () { $(this).remove(); }); }, 4000);
+        }
+
         function isWithin30MinWindow(startTimeStr, endTimeStr) {
             if (!startTimeStr || !endTimeStr) return true;
-
             const now = new Date();
-
             const parseTimeString = (timeStr) => {
                 const parts = timeStr.split(':');
                 const d = new Date();
                 d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2] || 0, 10), 0);
                 return d;
             };
-
             const startTime = parseTimeString(startTimeStr);
             const endTime = parseTimeString(endTimeStr);
-
             const allowedStart = new Date(startTime.getTime() - 30 * 60 * 1000);
             const allowedEnd = new Date(endTime.getTime() + 30 * 60 * 1000);
-
             return now >= allowedStart && now <= allowedEnd;
         }
 
-        // Helper: Get array of recorded dates for current modal context
         function getRecordedDatesForCurrentContext() {
             const scheduleId = String($('#instructor_schedule_id').val()).trim();
             const instructorId = String($('#instructor_id_input').val()).trim();
-
             return allInstructorRecords
                 .filter(rec => {
                     const recClassId = String(rec.class_id ?? rec.schedule_id ?? '').trim();
@@ -648,23 +706,20 @@
                 .map(rec => String(rec.attendance_date ?? '').split(' ')[0].trim());
         }
 
-        // ----------------------------------------------------
-        // 2. Flatpickr Initialization
-        // ----------------------------------------------------
+        // ==========================
+        // Instructor Modal Logic
+        // ==========================
         let instructorFp = flatpickr("#instructor-inline-picker", {
             inline: true,
             enableTime: false,
             dateFormat: "Y-m-d",
             defaultDate: todayStr,
             onChange: function (selectedDates, dateStr, instance) {
-                if (dateStr !== todayStr) {
-                    instance.setDate(todayStr, false);
-                }
+                if (dateStr !== todayStr) instance.setDate(todayStr, false);
             },
             onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const dateFormatted = flatpickr.formatDate(dayElem.dateObj, "Y-m-d");
                 const recordedDates = getRecordedDatesForCurrentContext();
-
                 if (recordedDates.includes(dateFormatted)) {
                     dayElem.classList.add("has-recorded-attendance");
                     dayElem.title = "Attendance Already Recorded";
@@ -675,66 +730,61 @@
         function updateInstructorDateStatus(selectedDateStr) {
             const scheduleId = String($('#instructor_schedule_id').val()).trim();
             const instructorId = String($('#instructor_id_input').val()).trim();
-
             const isAlreadyRecorded = allInstructorRecords.some(rec => {
                 const recClassId = String(rec.class_id ?? rec.schedule_id ?? '').trim();
                 const recInstId = String(rec.instructor_id ?? '').trim();
                 const recDate = String(rec.attendance_date ?? '').split(' ')[0].trim();
-
-                return recClassId === scheduleId &&
-                    recInstId === instructorId &&
-                    recDate === selectedDateStr &&
-                    !rec.client_id;
+                return recClassId === scheduleId && recInstId === instructorId && !rec.client_id;
             });
-
             const submitBtn = $('#instructorAttendanceForm button[type="submit"]');
             if (isAlreadyRecorded) {
-                submitBtn.prop('disabled', true).text('Already Recorded');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-check-circle me-1"></i> Already Recorded');
                 submitBtn.removeClass('btn-primary btn-danger').addClass('btn-secondary');
             } else {
-                submitBtn.prop('disabled', false).text('Confirm Instructor Attendance');
+                submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Confirm Attendance');
                 submitBtn.removeClass('btn-secondary btn-danger').addClass('btn-primary');
             }
         }
 
-        $('#instructorAttendanceForm').on('submit', function (e) {
-            $('#instructor_attendance_date').val(todayStr);
+        $('#instructorAttendanceForm').on('submit', function () { $('#instructor_attendance_date').val(todayStr); });
+
+        // Update status when selected instructor changes
+        $('#instructor_id_input').on('change', function() {
+            updateInstructorDateStatus(todayStr);
+            instructorFp.redraw();
         });
 
-        // ----------------------------------------------------
-        // 3. Modal Trigger Handler
-        // ----------------------------------------------------
         $(document).on('click', '.openInstructorModal', function (e) {
             e.preventDefault();
-
             const scheduleId = $(this).data('schedule-id');
-            const instructorId = $(this).data('instructor-id');
-            const instructorName = $(this).data('instructor-name');
+            const assignedInstructorId = String($(this).data('instructor-id'));
             const classStartDate = $(this).data('start-date');
             const classEndDate = $(this).data('end-date');
             const classStartTime = $(this).data('start-time');
             const classEndTime = $(this).data('end-time');
 
+            // Populate Dropdown for Instructors (Assigned vs Substitute)
+            let optionsHtml = '';
+            allSystemInstructors.forEach(inst => {
+                let isSelected = (String(inst.id) === assignedInstructorId) ? 'selected' : '';
+                let label = (String(inst.id) === assignedInstructorId) ? ' (Assigned)' : ' (Substitute)';
+                let name = inst.user ? inst.user.name : 'Unknown';
+                optionsHtml += `<option value="${inst.id}" ${isSelected}>${name} ${label}</option>`;
+            });
+            $('#instructor_id_input').html(optionsHtml);
+
             const rawDays = $(this).data('class-days') || [];
             let classDays = [];
             if (typeof rawDays === 'string') {
-                try {
-                    classDays = JSON.parse(rawDays);
-                } catch (err) {
-                    classDays = rawDays.split(',').map(d => d.trim());
-                }
+                try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); }
             } else if (Array.isArray(rawDays)) {
                 classDays = rawDays;
             }
 
             $('#instructor_schedule_id').val(scheduleId);
-            $('#instructor_id_input').val(instructorId);
-            $('#selectedInstructorNameText').text(instructorName);
             $('#instructor_attendance_date').val(todayStr);
 
-            const isWithinDateRange = (!classStartDate || todayStr >= classStartDate) &&
-                (!classEndDate || todayStr <= classEndDate);
-
+            const isWithinDateRange = (!classStartDate || todayStr >= classStartDate) && (!classEndDate || todayStr <= classEndDate);
             const isTodayClassDay = isDateOnClassDay(todayStr, classDays);
             const isTimeValid = isWithin30MinWindow(classStartTime, classEndTime);
 
@@ -753,13 +803,13 @@
             const submitBtn = $('#instructorAttendanceForm button[type="submit"]');
 
             if (!isWithinDateRange) {
-                submitBtn.prop('disabled', true).text('Cannot Record: Outside Class Date Range');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Outside Date Range');
                 submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
             } else if (!isTodayClassDay) {
-                submitBtn.prop('disabled', true).text('Cannot Record: Today is not a class day');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Not a Class Day');
                 submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
             } else if (!isTimeValid) {
-                submitBtn.prop('disabled', true).text('Cannot Record: Outside 30-Min Window');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Outside 30-Min Window');
                 submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
             } else {
                 updateInstructorDateStatus(todayStr);
@@ -768,9 +818,25 @@
             $('#instructorAttendanceModal').modal('show');
         });
 
-        // ----------------------------------------------------
-        // 4. Audit Table Render Logic
-        // ----------------------------------------------------
+        // ==========================
+        // Open Student Check-In Modal from Unified Dropdown
+        // ==========================
+        $(document).on('click', '.openStudentCheckinModal', function (e) {
+            e.preventDefault();
+            const classId = $(this).data('class-id');
+            
+            let isDateView = $('#viewDateMode').is(':checked');
+            let selectedDate = isDateView ? $('#mainTableDateFilter').val() : todayStr;
+
+            $('#auditClassSelect').val(classId).trigger('change');
+            $('#auditDateSelect').val(selectedDate).trigger('change');
+            
+            $('#adminReviewAttendanceModal').modal('show');
+        });
+
+        // ==========================
+        // Modal Student Attendance Audit Logic
+        // ==========================
         function renderAuditTable() {
             const classId = $('#auditClassSelect').val();
             const auditDate = $('#auditDateSelect').val();
@@ -779,7 +845,14 @@
             tbody.empty();
 
             if (!classId) {
-                tbody.html('<tr><td colspan="3" class="text-center text-muted py-5">Please select a class schedule above to view records.</td></tr>');
+                tbody.html(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox d-block fs-1 mb-3 text-secondary opacity-50"></i>
+                            Please select a class schedule above to view records.
+                        </td>
+                    </tr>
+                `);
                 return;
             }
 
@@ -792,14 +865,8 @@
             const rawDays = selectedOption.data('days') || [];
             let classDays = [];
             if (typeof rawDays === 'string') {
-                try {
-                    classDays = JSON.parse(rawDays);
-                } catch (err) {
-                    classDays = rawDays.split(',').map(d => d.trim());
-                }
-            } else if (Array.isArray(rawDays)) {
-                classDays = rawDays;
-            }
+                try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); }
+            } else if (Array.isArray(rawDays)) { classDays = rawDays; }
 
             if (classStartDate && classEndDate) {
                 $('#auditDateSelect').attr('min', classStartDate).attr('max', classEndDate);
@@ -829,43 +896,45 @@
                 rec.attendance_date === auditDate &&
                 rec.client_id
             );
+            
             let matchCount = 0;
 
             allClientsMaster.forEach(client => {
                 const clientClassId = client.selected_class_id;
+                let bookedDate = client.booked_date;
+                if (bookedDate && bookedDate.includes(' ')) {
+                    bookedDate = bookedDate.split(' ')[0];
+                }
+
                 if (String(clientClassId) !== String(classId)) return;
+                
+                if (bookedDate && bookedDate !== auditDate) return;
 
-                const user = client.booking_user;
+                const user = client.booking_user || client.user;
                 if (!user) return;
-
                 const studentId = String(user.id);
                 const studentName = user.name || 'Unknown Student';
 
-                if (searchTerm && !studentName.toLowerCase().includes(searchTerm)) {
-                    return;
-                }
+                if (searchTerm && !studentName.toLowerCase().includes(searchTerm)) { return; }
 
                 matchCount++;
-
                 const matchingRecord = currentFilteredRecords.find(rec => String(rec.client_id) === studentId);
                 const isRecorded = !!matchingRecord;
 
                 const statusBadge = isRecorded
-                    ? '<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-check me-1"></i> Recorded</span>'
-                    : '<span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1"><i class="fas fa-clock me-1"></i> Not Recorded</span>';
+                    ? '<span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-check-circle me-1"></i> Recorded</span>'
+                    : '<span class="badge bg-warning-subtle text-warning border border-warning px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-clock me-1"></i> Not Recorded</span>';
 
                 let actionButton = '';
                 if (isRecorded) {
                     let recordDateObj = matchingRecord.created_at ? new Date(matchingRecord.created_at) : new Date();
                     let formattedDateTime = '';
-
                     if (recordDateObj && !isNaN(recordDateObj)) {
                         let dateStr = recordDateObj.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
                         let timeStr = recordDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         formattedDateTime = `${dateStr}, ${timeStr}`;
                     }
-
-                    actionButton = `<span class="text-muted small"><i class="fas fa-history text-secondary me-1"></i> Checked In - ${formattedDateTime}</span>`;
+                    actionButton = `<span class="text-muted small fw-bold bg-light px-3 py-2 border rounded-pill shadow-sm"><i class="fas fa-history text-secondary me-1"></i> Checked In - ${formattedDateTime}</span>`;
                 } else {
                     if (!canCheckIn) {
                         if (!isDayValid) {
@@ -876,75 +945,45 @@
                             actionButton = `<span class="badge bg-light text-muted border px-2 py-1">Outside Class Date/Time</span>`;
                         }
                     } else {
-                        actionButton = `<button type="button" class="btn btn-success btn-sm px-3 rounded-pill quickCheckBtn shadow-sm" data-student-id="${studentId}" data-student-name="${studentName}">Check In</button>`;
+                        actionButton = `<button type="button" class="btn btn-primary btn-sm px-4 py-2 rounded-pill fw-bold quickCheckBtn shadow-sm" data-student-id="${studentId}" data-student-name="${studentName}"><i class="fas fa-check me-1"></i> Check In</button>`;
                     }
                 }
 
+                const displayDate = bookedDate || auditDate;
+
                 tbody.append(`
-            <tr class="border-bottom align-middle">
-                <td class="fw-bold text-dark">${studentName}</td>
-                <td class="text-center">${statusBadge}</td>
-                <td class="text-end">${actionButton}</td>
-            </tr>
-        `);
+                    <tr class="border-bottom align-middle bg-white">
+                        <td class="fw-bold text-dark ps-4 py-3">${studentName}</td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-primary border border-primary-subtle px-3 py-2 rounded-pill shadow-sm">
+                                <i class="fas fa-calendar-alt me-1"></i> ${displayDate}
+                            </span>
+                        </td>
+                        <td class="text-center">${statusBadge}</td>
+                        <td class="text-end pe-4">${actionButton}</td>
+                    </tr>
+                `);
             });
 
             if (matchCount === 0) {
-                tbody.html('<tr><td colspan="3" class="text-center text-muted py-4">No matching students found for this class.</td></tr>');
+                tbody.html(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="fas fa-search d-block mb-3 text-secondary opacity-50 fs-1"></i>
+                            No students booked for this class on the selected date (<strong>${auditDate}</strong>).
+                        </td>
+                    </tr>
+                `);
             }
         }
 
-        // ----------------------------------------------------
-        // 5. Audit Table Event Handlers & Dynamic Check-In (AJAX)
-        // ----------------------------------------------------
-        $('#auditClassSelect, #auditDateSelect').on('change', function () {
-            renderAuditTable();
-        });
+        $('#auditClassSelect, #auditDateSelect').on('change', function () { renderAuditTable(); });
+        $('#auditSearchInput').on('keyup search input', function () { renderAuditTable(); });
 
-        $('#auditSearchInput').on('keyup search input', function () {
-            renderAuditTable();
-        });
-
-        function showAuditAlert(message, type = 'success') {
-            const isSuccess = type === 'success';
-
-            const iconClass = isSuccess ? 'fa-check' : 'fa-exclamation';
-            const bgClass = isSuccess ? 'bg-success' : 'bg-danger';
-            const title = isSuccess ? 'Success' : 'Error';
-
-            const toastHtml = `
-        <div class="custom-toast ${type}-toast shadow-lg rounded-4 p-3 mb-3 d-flex align-items-center justify-content-between position-relative overflow-hidden">
-            <div class="d-flex align-items-center">
-                <div class="icon-shape ${bgClass} text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; flex-shrink: 0;">
-                    <i class="fas ${iconClass}"></i>
-                </div>
-                <div>
-                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">${title}</h6>
-                    <small class="text-secondary">${message}</small>
-                </div>
-            </div>
-            <button type="button" class="btn-close ms-3" onclick="$(this).closest('.custom-toast').fadeOut('fast', function(){ $(this).remove(); })"></button>
-            <div class="toast-progress ${bgClass}"></div>
-        </div>
-    `;
-
-            // Append toast inside container
-            const $toast = $(toastHtml).appendTo('#flash-alerts');
-
-            // Auto dismiss after 4 seconds
-            setTimeout(() => {
-                $toast.fadeOut('slow', function () {
-                    $(this).remove();
-                });
-            }, 4000);
-        }
-
-        // Quick Check-In via AJAX without closing modal/reloading page
         $(document).on('click', '.quickCheckBtn', function (e) {
             e.preventDefault();
-
+            
             const btn = $(this);
-            // Fixed syntax error: added missing closing parenthesis
             const studentId = btn.data('student-id');
             const studentName = btn.data('student-name') || 'Student';
             const classId = $('#auditClassSelect').val();
@@ -955,10 +994,8 @@
                 return;
             }
 
-            // Disable button briefly to prevent double submits
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking in...');
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Checking in...');
 
-            // Perform AJAX Request matching the form route
             $.ajax({
                 url: $('#quickCheckInForm').attr('action') || "{{ route('attendances.ClientinTime') }}",
                 type: 'POST',
@@ -966,13 +1003,11 @@
                     _token: '{{ csrf_token() }}',
                     class_id: classId,
                     attendance_date: auditDate,
-                    // Sent as array to satisfy 'client_ids' validation rule in Laravel
                     'client_ids[]': [studentId],
                     client_ids: [studentId],
                     client_id: studentId
                 },
                 success: function (response) {
-                    // Update local memory dataset
                     const newRecord = {
                         class_id: classId,
                         attendance_date: auditDate,
@@ -980,25 +1015,18 @@
                         created_at: new Date().toISOString()
                     };
                     allClientRecords.push(newRecord);
-
-                    // Re-render table locally
                     renderAuditTable();
-
-                    // Display Inline Success Message
                     showAuditAlert(`Successfully checked in <strong>${studentName}</strong>!`, 'success');
                 },
                 error: function (xhr) {
-                    btn.prop('disabled', false).text('Check In');
+                    btn.prop('disabled', false).html('<i class="fas fa-check me-1"></i> Check In');
                     let errorMsg = 'An error occurred while trying to check in.';
-
                     if (xhr.responseJSON && xhr.responseJSON.errors) {
-                        // Extract first validation error key & message
                         const firstKey = Object.keys(xhr.responseJSON.errors)[0];
                         errorMsg = xhr.responseJSON.errors[firstKey][0];
                     } else if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMsg = xhr.responseJSON.message;
                     }
-
                     showAuditAlert(`<strong>Error:</strong> ${errorMsg}`, 'danger');
                 }
             });

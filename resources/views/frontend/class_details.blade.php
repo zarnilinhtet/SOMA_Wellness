@@ -1,8 +1,24 @@
 @extends('layouts.link')
 
 @section('content')
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
+        /* --- Brand Variables --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+        }
+
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, textarea {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
         [x-cloak] {
             display: none !important;
         }
@@ -33,8 +49,7 @@
 
         /* --- Innovative Detail Layout Configuration --- */
         .details-page-wrapper {
-            background-color: #FAF8F5;
-            /* Fluid organic luxury cream tint */
+            background-color: var(--soma-bg);
             min-height: 100vh;
             padding: 120px 0 20px 0;
         }
@@ -45,7 +60,7 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
-            color: var(--soma-taupe, #706e6b);
+            color: var(--soma-secondary);
             font-size: 0.82rem;
             font-weight: 600;
             text-transform: uppercase;
@@ -55,17 +70,17 @@
         }
 
         .soma-back-link:hover {
-            color: var(--soma-beige, #c49a72);
+            color: var(--soma-primary);
             transform: translateX(-4px);
         }
 
         /* Split Architecture Frame */
         .showcase-grid-canvas {
             background: #ffffff;
-            border: 1px solid rgba(190, 150, 118, 0.12);
+            border: 1px solid rgba(190, 150, 118, 0.12); /* Perfect Beige RGB */
             border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(190, 150, 118, 0.05);
+            box-shadow: 0 20px 50px rgba(190, 150, 118, 0.05); /* Perfect Beige RGB */
         }
 
         /* Media Immersive Gallery Column Container */
@@ -73,7 +88,7 @@
             position: relative;
             height: 100%;
             min-height: 580px;
-            background: var(--soma-cream, #FAF7F2);
+            background: var(--soma-bg);
         }
 
         /* Slider Engine Component Framework */
@@ -145,12 +160,11 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 3px;
-            color: var(--soma-beige, #c49a72);
+            color: var(--soma-primary);
             margin-bottom: 1.25rem;
         }
 
         .meta-content-panel h1 {
-            font-family: 'Cormorant Garamond', serif;
             font-size: 3.2rem;
             font-weight: 500;
             color: var(--text-dark, #2b2b2b);
@@ -161,7 +175,7 @@
         .class-narrative {
             font-size: 1rem;
             line-height: 1.75;
-            color: var(--soma-taupe, #64625f);
+            color: var(--soma-secondary);
             margin-bottom: 2.5rem;
         }
 
@@ -170,7 +184,7 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 24px;
-            border-top: 1px solid rgba(190, 150, 118, 0.15);
+            border-top: 1px solid rgba(190, 150, 118, 0.15); /* Perfect Beige RGB */
             padding-top: 30px;
             margin-bottom: 2.5rem;
         }
@@ -184,7 +198,7 @@
             font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #a19f9c;
+            color: var(--soma-secondary);
             margin-bottom: 4px;
             font-weight: 600;
         }
@@ -201,7 +215,7 @@
             align-items: center;
             justify-content: space-between;
             background: #FDFDFD;
-            border: 1px solid rgba(190, 150, 118, 0.15);
+            border: 1px solid rgba(190, 150, 118, 0.15); /* Perfect Beige RGB */
             padding: 16px 24px;
             border-radius: 16px;
         }
@@ -215,11 +229,10 @@
             font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: var(--soma-taupe, #706e6b);
+            color: var(--soma-secondary);
         }
 
         .financial-metric strong {
-            font-family: 'Cormorant Garamond', serif;
             font-size: 2rem;
             color: var(--text-dark, #2b2b2b);
             line-height: 1;
@@ -242,14 +255,14 @@
         }
 
         .btn-premium-action:hover {
-            background-color: var(--soma-beige, #c49a72);
+            background-color: var(--soma-primary);
             color: #ffffff;
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(196, 154, 114, 0.25);
+            box-shadow: 0 8px 20px rgba(190, 150, 118, 0.25); /* Perfect Beige RGB */
         }
 
         .btn-premium-action.btn-waitlist {
-            background-color: #64625f;
+            background-color: var(--soma-secondary);
         }
 
         .btn-premium-action.btn-waitlist:hover {
@@ -443,7 +456,7 @@
 
                                 <!-- INTEGRATED PROGRESS BAR OCCUPANCY TRACKER -->
                                 <div class="matrix-node"
-                                    style="grid-column: span 2; background: #FAF8F5; padding: 16px; border-radius: 12px; border: 1px dashed rgba(190, 150, 118, 0.25); margin-top: 10px;">
+                                    style="grid-column: span 2; background: var(--soma-bg); padding: 16px; border-radius: 12px; border: 1px dashed rgba(190, 150, 118, 0.25); margin-top: 10px;">
 
                                     @php
                                         // Math computation variables for real-time calculation
@@ -469,7 +482,7 @@
                                                 Fully Booked </span>
                                         @else
                                             <span class="badge"
-                                                style="background: rgba(196, 154, 114, 0.15); color: var(--soma-dark, #2B2927); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                style="background: rgba(190, 150, 118, 0.15); color: var(--soma-dark, #2B2927); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                                                 Open Space </span>
                                         @endif
                                     </div>
@@ -478,14 +491,14 @@
                                     <div class="progress"
                                         style="height: 5px; background-color: rgba(190, 150, 118, 0.15); border-radius: 10px;">
                                         <div class="progress-bar" role="progressbar"
-                                            style="width: {{ $percentFilled }}%; background-color: {{ $remainingSlots <= 3 ? '#D9381E' : 'var(--soma-beige, #c49a72)' }}; border-radius: 10px; transition: width 0.6s ease;">
+                                            style="width: {{ $percentFilled }}%; background-color: {{ $remainingSlots <= 3 ? '#D9381E' : 'var(--soma-primary)' }}; border-radius: 10px; transition: width 0.6s ease;">
                                         </div>
                                     </div>
 
                                     <!-- Metric Parameters Counters -->
                                     <div class="d-flex justify-content-between mt-2"
                                         style="font-size: 11px; font-weight: 500;">
-                                        <span style="color: var(--soma-taupe, #706e6b);">
+                                        <span style="color: var(--soma-secondary);">
                                             <strong>{{ $bookedSlots }}</strong> spaces already booked
                                         </span>
                                         <span
@@ -606,7 +619,7 @@
                 </a>
 
             @else
-                <a onClick="joinClass({{ $class->id }})" class="btn-premium-action">
+                <a onClick="joinClass({{ $class->id }})" class="btn-premium-action" style="cursor: pointer;">
                     Join Class <i class="fas fa-chevron-right ms-2 small"></i>
                 </a>
             @endif
@@ -643,14 +656,14 @@
                                 <form action="{{ route('post.comment') }}" method="POST" class="m-0">
                                     @csrf
                                     <input type="hidden" name="class_id" value="{{ $class->id }}">
-                                    <div class="position-relative border-0 rounded-4 p-2" style="background-color: #f0f2f5;">
+                                    <div class="position-relative border-0 rounded-4 p-2" style="background-color: var(--soma-bg);">
                                         <textarea name="content"
                                             class="form-control bg-transparent border-0 pt-1 pb-5 px-2 shadow-none text-dark"
                                             placeholder="Write a comment..." rows="2" style="resize: none; font-size: 14px;"
                                             required></textarea>
                                         <div class="position-absolute bottom-0 end-0 p-2">
                                             <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold"
-                                                style="font-size: 13px; background-color: #1877f2; border: none;">Comment</button>
+                                                style="font-size: 13px; background-color: var(--soma-primary); border: none;">Comment</button>
                                         </div>
                                     </div>
                                 </form>
@@ -697,7 +710,7 @@
 
                         <div class="modal-header border-bottom-0 pb-0 pt-3 px-3">
                             <h6 class="modal-title fw-bold text-dark" style="font-size: 15px;">
-                                Reply to <span x-text="replyingToUser" class="text-primary"></span>
+                                Reply to <span x-text="replyingToUser" style="color: var(--soma-primary);"></span>
                             </h6>
                             <button type="button" class="btn-close shadow-none" @click="isOpen = false"></button>
                         </div>
@@ -709,7 +722,7 @@
 
                             <div class="modal-body pt-2 px-3">
                                 <div class="p-2 rounded-3 mb-3 text-muted border-start border-3"
-                                    style="background-color: #f8f9fa; font-size: 13px; border-color: #1877f2 !important;">
+                                    style="background-color: var(--soma-bg); font-size: 13px; border-color: var(--soma-primary) !important;">
                                     <em x-text="'&ldquo;' + parentContentPreview + '&rdquo;'"></em>
                                 </div>
 
@@ -723,7 +736,7 @@
                                     <div class="flex-grow-1">
                                         <textarea name="content" class="form-control border p-2 text-dark shadow-none"
                                             placeholder="Write a public reply..." rows="3"
-                                            style="font-size: 14px; background-color: #f0f2f5; border-radius: 10px; resize: none;"
+                                            style="font-size: 14px; background-color: var(--soma-bg); border-radius: 10px; resize: none;"
                                             required x-ref="replyInput"></textarea>
                                     </div>
                                 </div>
@@ -735,7 +748,7 @@
                                     Cancel
                                 </button>
                                 <button type="submit" class="btn btn-primary btn-sm fw-bold rounded-pill px-4"
-                                    style="font-size: 13px; background-color: #1877f2; border: none;">
+                                    style="font-size: 13px; background-color: var(--soma-primary); border: none;">
                                     Reply
                                 </button>
                             </div>

@@ -1,7 +1,31 @@
 @extends('layouts.link')
 
 @section('content')
+
+    <!-- Added Google Fonts for Fahkwang -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
+        /* --- Brand Variables --- */
+        :root {
+            --soma-primary: #BE9676; /* Perfect Beige */
+            --soma-secondary: #8D7E71; /* Desert Taupe */
+            --soma-bg: #FFF7E9; /* Soft Cream */
+            
+            /* Aliases for variables used in this layout */
+            --soma-cream: var(--soma-bg);
+            --soma-taupe: var(--soma-secondary);
+            --soma-beige: var(--soma-primary);
+            --text-dark: var(--soma-secondary); 
+        }
+
+        /* --- Global Font Settings --- */
+        body, h1, h2, h3, h4, h5, h6, p, span, a, div, button, input, textarea, li, ul {
+            font-family: 'Fahkwang', sans-serif !important;
+        }
+
         /* --- General Spacing & Background --- */
         .contact-section {
             background-color: var(--soma-cream);
@@ -11,7 +35,6 @@
 
         /* --- Typography --- */
         .section-title {
-            font-family: 'Cormorant Garamond', serif;
             color: var(--text-dark);
             font-size: 3rem;
             font-weight: 600;
@@ -19,7 +42,6 @@
         }
 
         .sub-title {
-            font-family: 'Cormorant Garamond', serif;
             color: var(--soma-taupe);
             font-size: 2rem;
             font-weight: 500;
