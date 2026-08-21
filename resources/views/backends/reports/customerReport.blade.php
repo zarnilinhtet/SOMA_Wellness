@@ -68,9 +68,9 @@
                                     </td>
                                     <td>{{ $customer->filtered_total_packages }}</td>
                                     <td>
-                                        <span class="badge bg-secondary">
-                                            ${{ number_format($customer->filtered_total_amount, 2) }}
-                                        </span>
+                                       
+                                            {{ number_format($customer->filtered_total_amount) }}
+                                       
                                     </td>
                                 </tr>
                             @endforeach

@@ -21,7 +21,18 @@
             @endif
         </div>
 
-        {{-- Flash Messages --}}
+        {{-- Error & Success Messages --}}
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
@@ -39,7 +50,7 @@
                                 <th>Name</th>
                                 <th>Phone</th>
                                 <th>Specialty</th>
-                                <th>Category Rates</th>
+                                <th>Category Rates & Bonuses</th>
                                 @if(auth()->user()->hasPermission('instructor_edit') || auth()->user()->hasPermission('instructor_delete'))
                                     <th class="text-center">Action</th>
                                 @endif
@@ -49,17 +60,26 @@
                             @foreach ($instructors as $instructor)
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
-                                    <td class="fw-bold">{{ $instructor->user->name }}</td>
+                                    <td class="fw-bold">{{ $instructor->user->name ?? 'Unknown User' }}</td>
                                     <td>{{ $instructor->user->phone ?? '-' }}</td>
                                     <td><span class="badge bg-secondary">{{ $instructor->specialty ?? 'General' }}</span></td>
                                     <td>
                                         @forelse($instructor->categoryFees as $fee)
-                                            <span class="badge bg-light text-dark border mb-1">
-                                                {{ $fee->category->name }}: 
-                                                <strong>
-                                                    {{ $fee->fee_type == 'percentage' ? number_format($fee->fee_value) . '%' : number_format($fee->fee_value) . ' MMK' }}
-                                                </strong>
-                                            </span><br>
+                                            <div class="badge bg-light text-dark border mb-2 text-start p-2 d-inline-block w-100">
+                                                <div class="fw-bold text-primary mb-1">{{ optional($fee->category)->name ?? 'Unknown Category' }}</div>
+                                                <div>Rate: <strong>{{ $fee->fee_type == 'percentage' ? floatval($fee->fee_value) . '%' : number_format($fee->fee_value) . ' MMK' }}</strong></div>
+                                                
+                                                @if(!empty($fee->bonuses) && is_array($fee->bonuses))
+                                                    <div class="mt-2 pt-1 border-top" style="font-size: 0.75rem;">
+                                                        <div class="text-success fw-bold"><i class="fas fa-gift me-1"></i>Bonus Tiers:</div>
+                                                        @foreach(collect($fee->bonuses)->sortBy('threshold') as $b)
+                                                            <div class="text-muted mt-1">
+                                                                - <strong>{{ $b['threshold'] }}</strong> Students or more: +<strong>{{ number_format($b['amount']) }}</strong> MMK
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div><br>
                                         @empty
                                             <span class="text-muted small">No rates set</span>
                                         @endforelse
@@ -79,7 +99,7 @@
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="btn btn-link btn-danger p-0"
-                                                            onclick="return confirm('Are you sure you want to delete {{ $instructor->user->name }}?')" title="Delete">
+                                                            onclick="return confirm('Are you sure you want to delete this instructor? This action cannot be undone.')" title="Delete">
                                                             <i class="fa fa-trash fs-5"></i>
                                                         </button>
                                                     </form>
@@ -125,10 +145,10 @@
                     </div>
 
                     <h6 class="fw-bold mt-4 mb-2">Category Fee Structure</h6>
-                    <div class="border rounded p-3 bg-light" style="max-height: 380px; overflow-y: auto;">
+                    <div class="border rounded p-3 bg-light" style="max-height: 450px; overflow-y: auto;">
                         <div class="row g-3">
                             @foreach($categories as $cat)
-                                <div class="col-md-6">
+                                <div class="col-md-12">
                                     <div class="card p-3 border category-fee-card">
                                         <div class="form-check mb-2">
                                             <input class="form-check-input cat-checkbox" type="checkbox"
@@ -139,16 +159,35 @@
                                             </label>
                                         </div>
                                         <div class="cat-fee-inputs" style="display: none;">
-                                            <div class="row g-2">
+                                            <div class="row g-2 mb-3 pb-2 border-bottom">
                                                 <div class="col-6">
+                                                    <label class="form-label small text-muted mb-1">Base Rate Type</label>
                                                     <select name="category_fees[{{ $cat->id }}][fee_type]" class="form-select form-select-sm">
                                                         <option value="fixed">Fixed Rate (MMK)</option>
                                                         <option value="percentage">Percentage (%)</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-6">
+                                                    <label class="form-label small text-muted mb-1">Base Rate Amount</label>
                                                     <input type="number" step="0.01" name="category_fees[{{ $cat->id }}][fee_value]"
-                                                        class="form-control form-control-sm" placeholder="e.g. 300000 or 30">
+                                                        class="form-control form-control-sm" placeholder="Rate (e.g. 300000 or 30)">
+                                                </div>
+                                            </div>
+
+                                            <label class="form-label small text-muted mb-1">Bonus Tiers (Optional)</label>
+                                            <div class="bonus-container" data-cat-id="{{ $cat->id }}">
+                                                <div class="row g-2 bonus-row align-items-center">
+                                                    <div class="col-5">
+                                                        <input type="number" name="category_fees[{{ $cat->id }}][bonuses][0][threshold]"
+                                                            class="form-control form-control-sm" placeholder="Target (e.g. 5)">
+                                                    </div>
+                                                    <div class="col-5">
+                                                        <input type="number" step="0.01" name="category_fees[{{ $cat->id }}][bonuses][0][amount]"
+                                                            class="form-control form-control-sm" placeholder="Bonus (MMK)">
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <button type="button" class="btn btn-sm btn-success add-bonus-btn"><i class="fas fa-plus"></i></button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -176,7 +215,7 @@
                     @csrf
                     @method('PUT')
                     <div class="modal-header">
-                        <h5 class="fw-bold">Edit Fee Rates ({{ $instructor->user->name }})</h5>
+                        <h5 class="fw-bold">Edit Fee Rates ({{ $instructor->user->name ?? 'Unknown' }})</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -198,14 +237,15 @@
                         </div>
 
                         <h6 class="fw-bold mt-4 mb-2">Category Fee Rates</h6>
-                        <div class="border rounded p-3 bg-light" style="max-height: 380px; overflow-y: auto;">
+                        <div class="border rounded p-3 bg-light" style="max-height: 450px; overflow-y: auto;">
                             <div class="row g-3">
                                 @foreach($categories as $cat)
                                     @php 
                                         $existingFee = $instructor->categoryFees->firstWhere('category_id', $cat->id);
                                         $isCheck = !empty($existingFee);
+                                        $bonuses = $existingFee ? ($existingFee->bonuses ?? []) : [];
                                     @endphp
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <div class="card p-3 border category-fee-card {{ $isCheck ? 'selected' : '' }}">
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input cat-checkbox" type="checkbox"
@@ -216,17 +256,54 @@
                                                 </label>
                                             </div>
                                             <div class="cat-fee-inputs" style="{{ $isCheck ? 'display: block;' : 'display: none;' }}">
-                                                <div class="row g-2">
+                                                <div class="row g-2 mb-3 pb-2 border-bottom">
                                                     <div class="col-6">
+                                                        <label class="form-label small text-muted mb-1">Base Rate Type</label>
                                                         <select name="category_fees[{{ $cat->id }}][fee_type]" class="form-select form-select-sm">
                                                             <option value="fixed" {{ ($existingFee->fee_type ?? '') == 'fixed' ? 'selected' : '' }}>Fixed Rate (MMK)</option>
                                                             <option value="percentage" {{ ($existingFee->fee_type ?? '') == 'percentage' ? 'selected' : '' }}>Percentage (%)</option>
                                                         </select>
                                                     </div>
                                                     <div class="col-6">
+                                                        <label class="form-label small text-muted mb-1">Base Rate Amount</label>
                                                         <input type="number" step="0.01" name="category_fees[{{ $cat->id }}][fee_value]"
                                                             class="form-control form-control-sm" value="{{ $existingFee->fee_value ?? '' }}" placeholder="Rate">
                                                     </div>
+                                                </div>
+
+                                                <label class="form-label small text-muted mb-1">Bonus Tiers (Optional)</label>
+                                                <div class="bonus-container" data-cat-id="{{ $cat->id }}">
+                                                    @if(is_array($bonuses) && count($bonuses) > 0)
+                                                        @foreach($bonuses as $index => $b)
+                                                            <div class="row g-2 mt-1 bonus-row align-items-center">
+                                                                <div class="col-5">
+                                                                    <input type="number" name="category_fees[{{ $cat->id }}][bonuses][{{ $index }}][threshold]" class="form-control form-control-sm" value="{{ $b['threshold'] }}" placeholder="Target">
+                                                                </div>
+                                                                <div class="col-5">
+                                                                    <input type="number" step="0.01" name="category_fees[{{ $cat->id }}][bonuses][{{ $index }}][amount]" class="form-control form-control-sm" value="{{ $b['amount'] }}" placeholder="Bonus (MMK)">
+                                                                </div>
+                                                                <div class="col-2">
+                                                                    @if($index == 0)
+                                                                        <button type="button" class="btn btn-sm btn-success add-bonus-btn"><i class="fas fa-plus"></i></button>
+                                                                    @else
+                                                                        <button type="button" class="btn btn-sm btn-danger remove-bonus-btn"><i class="fas fa-minus"></i></button>
+                                                                    @endif
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    @else
+                                                        <div class="row g-2 mt-1 bonus-row align-items-center">
+                                                            <div class="col-5">
+                                                                <input type="number" name="category_fees[{{ $cat->id }}][bonuses][0][threshold]" class="form-control form-control-sm" placeholder="Target">
+                                                            </div>
+                                                            <div class="col-5">
+                                                                <input type="number" step="0.01" name="category_fees[{{ $cat->id }}][bonuses][0][amount]" class="form-control form-control-sm" placeholder="Bonus (MMK)">
+                                                            </div>
+                                                            <div class="col-2">
+                                                                <button type="button" class="btn btn-sm btn-success add-bonus-btn"><i class="fas fa-plus"></i></button>
+                                                            </div>
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>
@@ -247,9 +324,10 @@
 
 @include('master.footer')
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function () {
-        // Toggle Fee Inputs based on checkbox selection
+        // Toggle Category Fee Card
         $(document).on('change', '.cat-checkbox', function () {
             var card = $(this).closest('.category-fee-card');
             var inputs = card.find('.cat-fee-inputs');
@@ -261,6 +339,34 @@
                 card.removeClass('selected');
                 inputs.slideUp(200);
             }
+        });
+
+        // Add Bonus Row Dynamically
+        $(document).on('click', '.add-bonus-btn', function() {
+            let container = $(this).closest('.bonus-container');
+            let catId = container.data('cat-id');
+            // Timestamp သုံးခြင်းဖြင့် Edit/Add လုပ်သည့်အခါ Array Index တွေ မထပ်အောင် ကာကွယ်ပေးသည်
+            let uniqueIndex = new Date().getTime(); 
+
+            let html = `
+                <div class="row g-2 mt-1 bonus-row align-items-center">
+                    <div class="col-5">
+                        <input type="number" name="category_fees[${catId}][bonuses][${uniqueIndex}][threshold]" class="form-control form-control-sm" placeholder="Target (e.g. 10)">
+                    </div>
+                    <div class="col-5">
+                        <input type="number" step="0.01" name="category_fees[${catId}][bonuses][${uniqueIndex}][amount]" class="form-control form-control-sm" placeholder="Bonus (MMK)">
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-sm btn-danger remove-bonus-btn"><i class="fas fa-minus"></i></button>
+                    </div>
+                </div>
+            `;
+            container.append(html);
+        });
+
+        // Remove Bonus Row
+        $(document).on('click', '.remove-bonus-btn', function() {
+            $(this).closest('.bonus-row').remove();
         });
     });
 </script>

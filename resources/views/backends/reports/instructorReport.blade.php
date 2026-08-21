@@ -25,12 +25,10 @@
                         </thead>
                         <tbody>
                             @foreach ($instructors as $instructor)
-                                {{-- array offset on null error မတက်အောင် $instructor ကို အရင်စစ်ပေးပါတယ် --}}
                                 @if($instructor)
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>
-                                            {{-- Clickable instructor name triggers the interactive modal --}}
                                             <a href="javascript:void(0)" class="fw-bold text-primary show-instructor-details"
                                                 data-id="{{ $instructor['id'] ?? '' }}" 
                                                 data-name="{{ $instructor['name'] ?? 'Unknown' }}"
@@ -63,13 +61,11 @@
                     aria-label="Close"></button>
             </div>
             <div class="modal-body" style="max-height: 550px; overflow-y: auto;">
-                {{-- Loading state spinner --}}
                 <div id="loadingSpinner" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
-                {{-- Scrollable dynamic transaction card container --}}
                 <div id="packagesContainer" class="d-none">
                 </div>
             </div>
@@ -83,13 +79,11 @@
 @include('master.footer')
 
 <style>
-    /* Gives a subtle highlight effect on hover for interactive rows */
     .show-instructor-details:hover {
         opacity: 0.8;
         text-decoration: underline !important;
     }
 
-    /* Custom scrollbar styling for the scrollable modal body */
     .modal-body::-webkit-scrollbar {
         width: 6px;
     }
@@ -108,7 +102,6 @@
         background: #555;
     }
 
-    /* Excel Button Custom Style */
     .btn-excel {
         background-color: #107c41 !important;
         color: white !important;
@@ -122,7 +115,6 @@
     }
 </style>
 
-{{-- DataTables Export Plugin Scripts --}}
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -130,7 +122,6 @@
 
 <script>
     $(document).ready(function () {
-        // 1. Initialize main page DataTable with Excel Export
         if ($('#basic-datatables').length) {
             $('#basic-datatables').DataTable({
                 "order": [[0, "desc"]],
@@ -146,7 +137,6 @@
             });
         }
 
-        // 2. Handle interactive click event on instructor Name
         $(document).on('click', '.show-instructor-details', function () {
             let userId = $(this).data('id');
             let userName = $(this).data('name');
@@ -156,7 +146,6 @@
             $('#loadingSpinner').removeClass('d-none');
             $('#packagesContainer').addClass('d-none').empty();
 
-            // 3. Fetch transaction data asynchronously
             $.ajax({
                 url: '{{ route("instructor.packages.report", ":id") }}'.replace(':id', userId),
                 type: 'GET',
@@ -174,7 +163,8 @@
                                         <th>End Date</th>
                                         <th>Time</th>
                                         <th>Total Clients</th>
-                                        <th>Total Fee</th>
+                                        <th>Target Bonus</th>
+                                        <th>Total Fee (Incl. Bonus)</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
@@ -188,20 +178,19 @@
                                 <td>${res.end_date || '-'}</td>
                                 <td>${res.time || '-'}</td>
                                 <td>${res.total_clients || '0'}</td>
-                                <td>${res.total_fee ? Number(res.total_fee).toLocaleString() : '0'}</td>
+                                <td><span class="badge bg-success">${res.bonus_fee ? Number(res.bonus_fee).toLocaleString() : '0'}</span></td>
+                                <td class="fw-bold text-primary">${res.total_fee ? Number(res.total_fee).toLocaleString() : '0'}</td>
                             </tr>`;
                         });
 
                         html += `</tbody></table></div>`;
 
-                        // Inject HTML
                         $('#packagesContainer').html(html).removeClass('d-none');
 
-                        // Initialize DataTables inside the modal with Excel Export
                         if ($('#modal-datatables').length) {
                             $('#modal-datatables').DataTable({
                                 "order": [[0, "desc"]],
-                                "destroy": true, // Ensures it resets properly if modal is closed and reopened
+                                "destroy": true, 
                                 "dom": '<"row mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
                                 "buttons": [
                                     {

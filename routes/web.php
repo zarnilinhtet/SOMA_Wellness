@@ -542,7 +542,8 @@ Route::middleware([
 | Admin + Receptionist
 |
 */
-
+// Instructor Resource Routes
+Route::resource('instructors', InstructorController::class)->except(['create', 'show', 'edit']);
 Route::middleware([
     'auth',
     'permission:instructors.view'

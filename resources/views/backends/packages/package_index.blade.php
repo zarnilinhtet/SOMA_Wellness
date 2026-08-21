@@ -264,26 +264,26 @@
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6 mb-3">
-                                <label class="fw-bold">package Name <span class="text-danger">*</span></label>
+                                <label class="fw-bold">Package Name <span class="text-danger">*</span></label>
                                 <input type="text" value="{{ $package->name }}" name="name" class="form-control"
-                                    placeholder="soma" required>
+                                    placeholder="Enter Package Name" required>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Price <span class="text-danger">*</span></label>
                                 {{-- required ကို ဖြုတ်ထားပါသည် --}}
-                                <input type="number" value="{{ $package->price }}" name="price" class="form-control"
-                                    placeholder="10,000">
+                                <input type="number" value="{{ $package->price }}" name="price" class="form-control" required
+                                    placeholder="0">
                             </div>
-
 
                             <div class="col-12 mb-3">
                                 <label class="fw-bold">Type <span class="text-danger">*</span></label>
-                                <select name="type" class="form-select">
+                                <select name="type" class="form-select" required>
                                     <option value="">Choose Type</option>
 
                                     @foreach ($categories as $category)
-                                        <option value="{{ $category->id }}" {{ $package->category->id == $category->id ? 'selected' : '' }}>
+                                        {{-- FIXED: Added nullsafe operator (?->) to prevent crashing on null categories --}}
+                                        <option value="{{ $category->id }}" {{ $package->category?->id == $category->id ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
@@ -298,38 +298,38 @@
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Duration ( Days ) <span class="text-danger">*</span></label>
-                                <input type="number" name="duration" value="{{ $package->duration }}" class="form-control"
+                                <input type="number" name="duration" value="{{ $package->duration }}" class="form-control" required
                                     placeholder="12">
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Fixed Expired Duration ( Days ) <span class="text-danger">*</span></label>
-                                <input type="number" name="fix_duration" value="{{ $package->fix_duration }}" class="form-control"
+                                <input type="number" name="fix_duration" value="{{ $package->fix_duration }}" class="form-control" required
                                     placeholder="12">
                             </div>
 
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Class Count <span class="text-danger">*</span></label>
-                                <input type="number" name="class_count" value="{{ $package->class_count }}" class="form-control"
+                                <input type="number" name="class_count" required value="{{ $package->class_count }}" class="form-control"
                                     placeholder="12">
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Loyal Point <span class="text-danger">*</span></label>
-                                <input type="text" name="loyal_point" value="{{ $package->loyal_point }}" class="form-control"
+                                <input type="text" name="loyal_point" required value="{{ $package->loyal_point }}" class="form-control"
                                     placeholder="100">
                             </div>
 
                                <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Loyal Point Duration ( Days ) <span class="text-danger">*</span></label>
-                                <input type="number" name="loyal_duration" value="{{ $package->loyal_duration }}" class="form-control"
+                                <input type="number" name="loyal_duration" value="{{ $package->loyal_duration }}" class="form-control" required
                                     placeholder="12">
                             </div>
 
                             <div class="col-12 mb-3">
                                 <label class="fw-bold">Status <span class="text-danger">*</span></label>
-                                <select name="status" class="form-select">
+                                <select name="status" class="form-select" required>
                                     <option value="">Choose Status</option>
 
                                     <option value="active" {{ $package->status == 'active' ? 'selected' : '' }}>
@@ -368,14 +368,14 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6 mb-3">
-                            <label class="fw-bold">package Name <span class="text-danger">*</span></label>
-                            <input type="text" value="{{ old('name') }}" name="name" class="form-control" placeholder="soma" required>
+                            <label class="fw-bold">Package Name <span class="text-danger">*</span></label>
+                            <input type="text" value="{{ old('name') }}" name="name" class="form-control" placeholder="Enter Package Name" required>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label class="fw-bold">Price <span class="text-danger">*</span></label>
                             {{-- required ကို ဖြုတ်ထားပါသည် --}}
-                            <input type="number" value="{{ old('price') }}" name="price" class="form-control" placeholder="10,000">
+                            <input type="number" value="{{ old('price') }}" required name="price" class="form-control" placeholder="0">
                         </div>
 
                         <div class="col-12 mb-3">
@@ -397,29 +397,29 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="fw-bold"> Duration ( Days ) <span class="text-danger">*</span></label>
-                            <input type="number" value="{{ old('duration') }}" name="duration" class="form-control" placeholder="12">
+                            <input type="number" value="{{ old('duration') }}" name="duration" class="form-control" placeholder="0" required>
                         </div>
 
                             <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Fixed Expired Duration ( Days ) <span class="text-danger">*</span></label>
                                 <input type="number" value="{{ old('fix_duration') }}" name="fix_duration"  class="form-control"
-                                    placeholder="12">
+                                    placeholder="0" required>
                             </div>
 
                         <div class="col-md-6 mb-3">
                             <label class="fw-bold">Class Count <span class="text-danger">*</span></label>
-                            <input type="number" value="{{ old('class_count') }}" name="class_count" class="form-control" placeholder="10">
+                            <input type="number" value="{{ old('class_count') }}" name="class_count" class="form-control" placeholder="0" required>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label class="fw-bold">Loyal Point <span class="text-danger">*</span></label>
-                            <input type="text" value="{{ old('loyal_point') }}" name="loyal_point" class="form-control" placeholder="100">
+                            <input type="text" value="{{ old('loyal_point') }}" name="loyal_point" class="form-control" placeholder="0" required>
                         </div>
 
                            <div class="col-md-6 mb-3">
                                 <label class="fw-bold">Loyal Point Duration ( Days ) <span class="text-danger">*</span></label>
-                                <input type="number" value="{{ old('loyal_duration') }}" name="loyal_duration" class="form-control"
-                                    placeholder="12">
+                                <input type="number" value="{{ old('loyal_duration') }}" name="loyal_duration" class="form-control" required
+                                    placeholder="0">
                             </div>
 
                         <div class="col-md-6 mb-3">

@@ -108,7 +108,6 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $classes = ClassSchedule::with('category')->get();
 
-            // Fetch IDs of classes where this instructor is a substitute
             $substitutedClassIds = Attendance::where('instructor_id', $instructorId)
                 ->whereNull('client_id')
                 ->pluck('class_id')
@@ -125,7 +124,6 @@ class AttendanceController extends Controller
             foreach ($filteredSchedules as $schedule) {
                 $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
 
-                // Add current instructor to array if they are a substitute
                 if (in_array($schedule->id, $substitutedClassIds) && !in_array($instructorId, $assignedIds)) {
                     $assignedIds[] = $instructorId;
                 }
@@ -147,7 +145,6 @@ class AttendanceController extends Controller
             $instructorId = (string) $instructor->id;
             $att = ClassSchedule::with('category')->get();
 
-            // Find classes where instructor is a substitute
             $substitutedClassIds = Attendance::where('instructor_id', $instructorId)
                 ->whereNull('client_id')
                 ->pluck('class_id')
@@ -161,12 +158,10 @@ class AttendanceController extends Controller
                 return $isAssigned || $isSubstitute;
             });
 
-            // Gather all relevant instructor IDs and Schedule IDs for fetching attendances
             $allInstructorIds = $filteredSchedules->pluck('instructor_ids')->map(function ($ids) {
                 return is_array($ids) ? $ids : json_decode($ids, true) ?? [];
             })->flatten()->unique()->toArray();
 
-            // Ensure substitute instructor ID is also included in query
             if (!in_array($instructorId, $allInstructorIds)) {
                 $allInstructorIds[] = $instructorId;
             }
@@ -185,7 +180,7 @@ class AttendanceController extends Controller
                 $assignedIds = is_array($schedule->instructor_ids) ? $schedule->instructor_ids : json_decode($schedule->instructor_ids, true) ?? [];
 
                 if (in_array($schedule->id, $substitutedClassIds) && !in_array($instructorId, $assignedIds)) {
-                    $assignedIds[] = $instructorId; // Include substitute instructor manually
+                    $assignedIds[] = $instructorId;
                 }
 
                 $schedule->instructor = Instructor::with('user')
@@ -201,11 +196,9 @@ class AttendanceController extends Controller
             }
             $att = $filteredSchedules;
         } else {
-            // For Admin Role
             $att = ClassSchedule::with('category')->latest()->get();
             $allScheduleIds = $att->pluck('id')->toArray();
 
-            // Fetch today's instructor attendances to identify substitutes
             $todayAttendances = Attendance::whereIn('class_id', $allScheduleIds)
                 ->whereNull('client_id')
                 ->whereDate('attendance_date', now('Asia/Yangon')->format('Y-m-d'))
@@ -254,7 +247,7 @@ class AttendanceController extends Controller
         $instructorId = $request->instructor_id;
         $attendanceDate = $request->attendance_date;
 
-        Attendance::updateOrCreate(
+        $instructorAttendance = Attendance::updateOrCreate(
             [
                 'class_id' => $classId,
                 'attendance_date' => $attendanceDate,
@@ -274,15 +267,32 @@ class AttendanceController extends Controller
                 ->distinct()
                 ->get();
 
-            $classInstructor = Instructor::where('id', $instructorId)->first();
-            $feePercentage = $classInstructor->fee ?? 0;
+            $classObj = ClassSchedule::find($classId);
+            $categoryId = $classObj?->category_id;
+
+            $classInstructor = Instructor::with('categoryFees')->find($instructorId);
+            $categoryFeeSetting = null;
+            if ($classInstructor && $categoryId) {
+                $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
+            }
 
             foreach ($existingStudentAttendances as $studentAtt) {
                 $booking = Booking::with('package')
                     ->where('selected_class_id', $classId)
+                    ->where('registered_id', $studentAtt->client_id)
                     ->where('status', 'confirmed')
                     ->first();
-                $calculatedFee = ($booking->package->price * $feePercentage) / 100;
+
+                $packagePrice = $booking?->package?->price ?? 0;
+                $calculatedFee = 0;
+
+                if ($categoryFeeSetting) {
+                    if ($categoryFeeSetting->fee_type === 'percentage') {
+                        $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
+                    } elseif ($categoryFeeSetting->fee_type === 'fixed') {
+                        $calculatedFee = $categoryFeeSetting->fee_value;
+                    }
+                }
 
                 Attendance::updateOrCreate(
                     [
@@ -298,6 +308,20 @@ class AttendanceController extends Controller
                         'is_paid' => false,
                     ]
                 );
+            }
+
+            // Bonus logic retroactively applied to the instructor
+            $totalStudents = Attendance::where('class_id', $classId)
+                ->where('attendance_date', $attendanceDate)
+                ->whereNotNull('client_id')
+                ->count();
+
+            if ($categoryFeeSetting && $categoryFeeSetting->bonus_threshold > 0) {
+                if ($totalStudents >= $categoryFeeSetting->bonus_threshold) {
+                    $instructorAttendance->update(['fee_amount' => $categoryFeeSetting->bonus_amount]);
+                } else {
+                    $instructorAttendance->update(['fee_amount' => 0]);
+                }
             }
         }
 
@@ -317,7 +341,6 @@ class AttendanceController extends Controller
 
         if (auth()->user()->hasRole("Instructor")) {
             $instructorModel = Instructor::where('instructor_id', auth()->user()->id)->first();
-
             $inst = Attendance::where('class_id', $classId)
                 ->where('attendance_date', $attendanceDate)
                 ->where('instructor_id', $instructorModel?->id)
@@ -347,7 +370,7 @@ class AttendanceController extends Controller
             return back()->with('error', $msg);
         }
 
-        $classObj = \App\Models\ClassSchedule::with('category')->find($classId);
+        $classObj = ClassSchedule::with('category')->find($classId);
         $categoryId = $classObj?->category_id;
 
         $instructorIds = $checkedInTeachers->pluck('instructor_id')->unique();
@@ -371,9 +394,7 @@ class AttendanceController extends Controller
                 $calculatedFee = 0;
 
                 if ($classInstructor && $categoryId) {
-                    $categoryFeeSetting = $classInstructor->categoryFees
-                        ->firstWhere('category_id', $categoryId);
-
+                    $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
                     if ($categoryFeeSetting) {
                         if ($categoryFeeSetting->fee_type === 'percentage') {
                             $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
@@ -399,13 +420,30 @@ class AttendanceController extends Controller
             }
         }
 
+        // Apply Bonus Amount to Instructor's personal attendance record based on Total Students
+        $totalStudents = Attendance::where('class_id', $classId)
+            ->where('attendance_date', $attendanceDate)
+            ->whereNotNull('client_id')
+            ->count();
+
+        foreach ($checkedInTeachers as $teacherAtt) {
+            $classInstructor = $instructors->get($teacherAtt->instructor_id);
+            if ($classInstructor && $categoryId) {
+                $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
+                if ($categoryFeeSetting && $categoryFeeSetting->bonus_threshold > 0) {
+                    if ($totalStudents >= $categoryFeeSetting->bonus_threshold) {
+                        $teacherAtt->update(['fee_amount' => $categoryFeeSetting->bonus_amount]);
+                    } else {
+                        $teacherAtt->update(['fee_amount' => 0]);
+                    }
+                }
+            }
+        }
+
         $successMsg = 'Client Attendance checked in successfully!';
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => $successMsg
-            ], 200);
+            return response()->json(['status' => 'success', 'message' => $successMsg], 200);
         }
 
         return back()->with('success', $successMsg);
@@ -421,7 +459,6 @@ class AttendanceController extends Controller
 
         for ($i = 0; $i < 12; $i++) {
             $monthDate = Carbon::now()->subMonths($i);
-
             $count = Attendance::where('client_id', auth()->user()->id)
                 ->where('attended', true)
                 ->whereYear('date', $monthDate->year)
