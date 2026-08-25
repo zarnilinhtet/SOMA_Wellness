@@ -159,7 +159,6 @@
                 </div>
 
                 @php
-                    // Pre-fetch today's attendances to include Substitutes in Class Completion column
                     $todayDateBlade = \Carbon\Carbon::now('Asia/Yangon')->format('Y-m-d');
                     $classIds = collect($att)->pluck('id')->toArray();
                     $actualAttendancesToday = \App\Models\Attendance::with('instructor.user')
@@ -179,7 +178,7 @@
                                 <th style="min-width: 180px;">Class Name</th>
                                 <th style="min-width: 140px;">Class Date</th>
                                 <th style="min-width: 120px;">Class Time</th>
-                                <th style="min-width: 150px;" class="text-center">Manage Attendance</th>
+                                <th style="min-width: 150px;" class="text-center"> Class Confirmation</th>
                                 <th style="min-width: 180px;" class="text-center">Approval Progress</th>
                                 <th style="min-width: 180px;">Class Completion</th>
                             </tr>
@@ -189,7 +188,6 @@
                                 @php
                                     $yangonNow = \Carbon\Carbon::now('Asia/Yangon');
 
-                                    // Check Data for Javascript Filtering
                                     $rawStartDate = \Carbon\Carbon::parse($a->start_date)->format('Y-m-d');
                                     $rawEndDate = $a->end_date ? \Carbon\Carbon::parse($a->end_date)->format('Y-m-d') : '2099-12-31';
 
@@ -202,12 +200,10 @@
                                                         ->where('class_approve', 1)
                                                         ->exists();
 
-                                    // Merge Assigned Instructors with Actual Check-ins (Substitutes) for Display
                                     $todaysAttendances = $actualAttendancesToday->get($a->id) ?? collect();
                                     $displayInstructors = [];
                                     $assignedIdsArray = is_string($a->instructor_ids) ? json_decode($a->instructor_ids, true) : ($a->instructor_ids ?? []);
 
-                                    // 1. Add actual checked-in instructors (Assigned or Substitutes)
                                     foreach($todaysAttendances as $attRecord) {
                                         $isAssigned = in_array($attRecord->instructor_id, $assignedIdsArray);
                                         $displayInstructors[$attRecord->instructor_id] = [
@@ -219,7 +215,6 @@
                                         ];
                                     }
 
-                                    // 2. Add assigned instructors who HAVEN'T checked in yet
                                     foreach($a->instructor as $assignedInst) {
                                         if(!isset($displayInstructors[$assignedInst['id']])) {
                                             $displayInstructors[$assignedInst['id']] = [
@@ -276,7 +271,6 @@
                                             </button>
                                             
                                             <ul class="dropdown-menu shadow-lg border-0 p-2 mt-1" style="min-width: 250px;">
-                                                <!-- Section: Instructor Check-In -->
                                                 <li class="dropdown-header text-uppercase fw-bold text-primary px-3 mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
                                                     <i class="fas fa-chalkboard-teacher me-1"></i> Instructor Actions
                                                 </li>
@@ -287,6 +281,8 @@
                                                         data-class-days="{{ json_encode($a->days) }}"
                                                         data-start-date="{{ $a->start_date }}"
                                                         data-end-date="{{ $a->end_date }}"
+                                                        data-start-time="{{ $a->start_time }}"
+                                                        data-end-time="{{ $a->end_time }}"
                                                         data-instructor-id="{{ !empty($a->instructor) ? $a->instructor[0]['id'] : '' }}">
                                                         <i class="fas fa-user-check me-2 text-success"></i> 
                                                         <span class="fw-medium">Record / Substitute</span>
@@ -295,7 +291,6 @@
 
                                                 <li><hr class="dropdown-divider my-2 mx-2"></li>
                                                 
-                                                <!-- Section: Student Check-In -->
                                                 <li class="dropdown-header text-uppercase fw-bold text-info px-3 mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
                                                     <i class="fas fa-user-graduate me-1"></i> Student Actions
                                                 </li>
@@ -401,15 +396,14 @@
     </div>
 </div>
 
-{{-- ==================== INSTRUCTOR ATTENDANCE MODAL (With Substitute Selection) ==================== --}}
+{{-- ==================== INSTRUCTOR ATTENDANCE MODAL ==================== --}}
 @php
     $allSystemInstructors = \App\Models\Instructor::with('user')->get();
 @endphp
 
 <div class="modal fade" id="instructorAttendanceModal" tabindex="-1" aria-labelledby="instructorModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form id="instructorAttendanceForm" method="POST" action="{{ route('attendances.inTime') }}"
-            class="modal-content border-0 shadow-lg rounded-4">
+        <form id="instructorAttendanceForm" method="POST" action="{{ route('attendances.inTime') }}" class="modal-content border-0 shadow-lg rounded-4">
             @csrf
             <div class="modal-header bg-light border-0 rounded-top-4">
                 <h5 class="modal-title fw-bold text-dark" id="instructorModalTitle"><i class="fas fa-chalkboard-teacher text-primary me-2"></i> Record Instructor Attendance</h5>
@@ -418,23 +412,26 @@
             <div class="modal-body text-center p-4">
                 <input type="hidden" name="class_id" id="instructor_schedule_id">
 
-                {{-- DYNAMIC INSTRUCTOR SELECTION (Assigned vs Substitute) --}}
                 <div class="mb-4 text-start p-3 bg-light rounded-3 border">
                     <label class="form-label fw-bold text-dark mb-2"><i class="fas fa-user-tie text-primary me-1"></i> Select Teaching Instructor:</label>
                     <select name="instructor_id" id="instructor_id_input" class="form-select shadow-sm fw-bold" required>
-                        <!-- Options populated dynamically via JS -->
                     </select>
                     <small class="text-muted d-block mt-2" style="font-size: 0.8rem;">
                         <i class="fas fa-info-circle me-1 text-info"></i> Default is assigned instructor. Change this if a substitute teacher is taking the class today.
                     </small>
                 </div>
-
-                <div id="instructor-inline-picker" class="mx-auto" style="pointer-events: none;"></div>
+                
+                <div id="instructor-inline-picker" class="mx-auto" {!! auth()->user()->hasRole('Admin') ? '' : 'style="pointer-events: none;"' !!}></div>
 
                 <input type="hidden" name="attendance_date" id="instructor_attendance_date" required>
             </div>
-            <div class="modal-footer border-0 bg-light rounded-bottom-4">
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill shadow-sm fs-6">
+            <div class="modal-footer border-0 bg-light rounded-bottom-4 d-flex justify-content-between gap-2">
+                {{-- CANCEL RECORD BUTTON (Hidden initially) --}}
+                <button type="button" class="btn btn-outline-danger rounded-pill fw-bold shadow-sm d-none cancelInstructorBtn px-3">
+                    <i class="fas fa-times-circle me-1"></i> Cancel Record
+                </button>
+                {{-- SUBMIT BUTTON --}}
+                <button type="submit" class="btn btn-primary rounded-pill shadow-sm fw-bold confirmInstructorBtn flex-grow-1">
                     <i class="fas fa-check-circle me-1"></i> Confirm Attendance
                 </button>
             </div>
@@ -468,35 +465,23 @@
                                     $belongsToInstructor = false;
 
                                     if ($isInstructorUser) {
-                                        // Condition 1: Check if this logged-in instructor is explicitly assigned to this class
                                         if (!empty($a->instructor)) {
                                             $instructors = $a->instructor;
-                                            if (is_string($instructors)) {
-                                                $instructors = json_decode($instructors, true);
-                                            }
-                                            if ($instructors instanceof \Illuminate\Support\Collection) {
-                                                $instructors = $instructors->toArray();
-                                            }
+                                            if (is_string($instructors)) { $instructors = json_decode($instructors, true); }
+                                            if ($instructors instanceof \Illuminate\Support\Collection) { $instructors = $instructors->toArray(); }
                                             if (is_array($instructors)) {
                                                 foreach ($instructors as $insItem) {
                                                     $userId = is_array($insItem) ? ($insItem['user']['id'] ?? ($insItem['user_id'] ?? null)) : ($insItem->user->id ?? null);
-                                                    if ($userId == $currentInstructorUserId) {
-                                                        $belongsToInstructor = true;
-                                                        break;
-                                                    }
+                                                    if ($userId == $currentInstructorUserId) { $belongsToInstructor = true; break; }
                                                 }
                                             }
                                         }
 
-                                        // Condition 2: NEW ADDITION -> Check if the logged in instructor has Substitute Attendance today for this class
                                         if (!$belongsToInstructor) {
                                             $todaysAttendancesForThisClass = $actualAttendancesToday->get($a->id) ?? collect();
                                             foreach($todaysAttendancesForThisClass as $attRecord) {
                                                 $subUserId = $attRecord->instructor->user->id ?? ($attRecord->instructor->user_id ?? null);
-                                                if ($subUserId == $currentInstructorUserId) {
-                                                    $belongsToInstructor = true;
-                                                    break;
-                                                }
+                                                if ($subUserId == $currentInstructorUserId) { $belongsToInstructor = true; break; }
                                             }
                                         }
                                     }
@@ -571,20 +556,19 @@
 
 <script>
     $(document).ready(function () {
-        // ==========================
         // Variables & Init Data
-        // ==========================
         let allInstructorRecords = @json($instructorRecord ?? ($record ?? []));
         let allClientRecords = @json($record ?? []);
         @php $clientsMaster = App\Models\Booking::with('bookingUser')->get(); @endphp
         const allClientsMaster = @json($clientsMaster ?? []);
         const allSystemInstructors = @json($allSystemInstructors ?? []);
 
+        const isAdmin = @json(auth()->user()->hasRole('Admin'));
+
         const todayStr = flatpickr.formatDate(new Date(), "Y-m-d");
         const dayMap = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
         const fullDayMap = { 0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
 
-        // Helper Functions 
         function isDateOnClassDay(dateStr, classDaysArray) {
             if (!classDaysArray || classDaysArray.length === 0) return true;
             const parts = dateStr.split('-');
@@ -596,12 +580,9 @@
             return normalizedDays.includes(String(dayNum)) || normalizedDays.includes(shortName) || normalizedDays.includes(fullName);
         }
 
-        // ==========================
-        // DataTable & Custom View Filters
-        // ==========================
+        // DataTable & Filters
         $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
             if (settings.nTable.id !== 'branch-table') return true;
-            
             let viewMode = $('input[name="classViewMode"]:checked').attr('id');
             if (viewMode === 'viewAllMode') return true;
 
@@ -614,38 +595,21 @@
             let daysRaw = $row.attr('data-days');
             
             if (filterDateStr < startDate || filterDateStr > endDate) return false;
-
             let daysArray = [];
             try { daysArray = JSON.parse(daysRaw); } catch(e) {}
-            
             return isDateOnClassDay(filterDateStr, daysArray);
         });
 
-        if ($.fn.DataTable.isDataTable('#branch-table')) {
-            $('#branch-table').DataTable().destroy();
-        }
-        
-        let branchTable = $('#branch-table').DataTable({
-            order: [], 
-            language: {
-                emptyTable: "No classes found for the selected view or date."
-            }
-        });
+        if ($.fn.DataTable.isDataTable('#branch-table')) { $('#branch-table').DataTable().destroy(); }
+        let branchTable = $('#branch-table').DataTable({ order: [], language: { emptyTable: "No classes found for the selected view or date." }});
 
         $('input[name="classViewMode"], #mainTableDateFilter').on('change', function() {
-            if ($('#viewAllMode').is(':checked')) {
-                $('#mainTableDateContainer').slideUp('fast'); 
-            } else {
-                $('#mainTableDateContainer').slideDown('fast'); 
-            }
+            if ($('#viewAllMode').is(':checked')) { $('#mainTableDateContainer').slideUp('fast'); } else { $('#mainTableDateContainer').slideDown('fast'); }
             branchTable.draw(); 
         });
-
         branchTable.draw();
 
-        // ==========================
-        // General Utility Interactions
-        // ==========================
+        // Utilities
         $(document).on('click', '.btn-confirm-action', function(e) {
             e.preventDefault();
             let form = $(this).closest('form');
@@ -707,7 +671,7 @@
         }
 
         // ==========================
-        // Instructor Modal Logic
+        // Instructor Modal Logic & Cancel Request
         // ==========================
         let instructorFp = flatpickr("#instructor-inline-picker", {
             inline: true,
@@ -715,7 +679,12 @@
             dateFormat: "Y-m-d",
             defaultDate: todayStr,
             onChange: function (selectedDates, dateStr, instance) {
-                if (dateStr !== todayStr) instance.setDate(todayStr, false);
+                if (!isAdmin && dateStr !== todayStr) {
+                    instance.setDate(todayStr, false);
+                    dateStr = todayStr;
+                }
+                $('#instructor_attendance_date').val(dateStr);
+                updateInstructorDateStatus(dateStr);
             },
             onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const dateFormatted = flatpickr.formatDate(dayElem.dateObj, "Y-m-d");
@@ -730,27 +699,86 @@
         function updateInstructorDateStatus(selectedDateStr) {
             const scheduleId = String($('#instructor_schedule_id').val()).trim();
             const instructorId = String($('#instructor_id_input').val()).trim();
+            
             const isAlreadyRecorded = allInstructorRecords.some(rec => {
                 const recClassId = String(rec.class_id ?? rec.schedule_id ?? '').trim();
                 const recInstId = String(rec.instructor_id ?? '').trim();
                 const recDate = String(rec.attendance_date ?? '').split(' ')[0].trim();
-                return recClassId === scheduleId && recInstId === instructorId && !rec.client_id;
+                return recClassId === scheduleId && recInstId === instructorId && recDate === selectedDateStr && !rec.client_id;
             });
-            const submitBtn = $('#instructorAttendanceForm button[type="submit"]');
+
+            const submitBtn = $('.confirmInstructorBtn');
+            const cancelBtn = $('.cancelInstructorBtn');
+
             if (isAlreadyRecorded) {
-                submitBtn.prop('disabled', true).html('<i class="fas fa-check-circle me-1"></i> Already Recorded');
-                submitBtn.removeClass('btn-primary btn-danger').addClass('btn-secondary');
+                cancelBtn.removeClass('d-none');
+                
+                if (!isAdmin) {
+                    submitBtn.prop('disabled', true).html('<i class="fas fa-check-circle me-1"></i> Already Recorded');
+                    submitBtn.removeClass('btn-primary btn-danger flex-grow-1').addClass('btn-secondary');
+                } else {
+                    submitBtn.prop('disabled', false).html('<i class="fas fa-sync me-1"></i> Update Record');
+                    submitBtn.removeClass('btn-secondary btn-danger').addClass('btn-primary flex-grow-1');
+                }
             } else {
+                cancelBtn.addClass('d-none');
                 submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Confirm Attendance');
-                submitBtn.removeClass('btn-secondary btn-danger').addClass('btn-primary');
+                submitBtn.removeClass('btn-secondary btn-danger').addClass('btn-primary flex-grow-1');
             }
         }
 
-        $('#instructorAttendanceForm').on('submit', function () { $('#instructor_attendance_date').val(todayStr); });
+        // Cancel Instructor Attendance AJAX
+        $(document).on('click', '.cancelInstructorBtn', function(e) {
+            e.preventDefault();
+            if(!confirm('Are you sure you want to cancel this instructor attendance record?')) return;
 
-        // Update status when selected instructor changes
+            let btn = $(this);
+            let classId = $('#instructor_schedule_id').val();
+            let instructorId = $('#instructor_id_input').val();
+            let attDate = $('#instructor_attendance_date').val();
+
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Canceling...');
+
+            $.ajax({
+                url: "{{ route('attendances.cancelInTime') ?? '/attendances/cancel-instructor' }}",
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    class_id: classId,
+                    instructor_id: instructorId,
+                    attendance_date: attDate
+                },
+                success: function(res) {
+                    showAuditAlert(res.message, 'success');
+                    
+                    allInstructorRecords = allInstructorRecords.filter(rec => {
+                        let recClassId = String(rec.class_id ?? rec.schedule_id ?? '').trim();
+                        let recInstId = String(rec.instructor_id ?? '').trim();
+                        let recDate = String(rec.attendance_date ?? '').split(' ')[0].trim();
+                        return !(recClassId === String(classId) && recInstId === String(instructorId) && recDate === attDate && !rec.client_id);
+                    });
+
+                    updateInstructorDateStatus(attDate);
+                    instructorFp.redraw();
+                    btn.prop('disabled', false).html('<i class="fas fa-times-circle me-1"></i> Cancel Record');
+                },
+                error: function(xhr) {
+                    showAuditAlert('Failed to cancel record. Record may not exist.', 'danger');
+                    btn.prop('disabled', false).html('<i class="fas fa-times-circle me-1"></i> Cancel Record');
+                }
+            });
+        });
+
+        $('#instructorAttendanceForm').off('submit').on('submit', function () { 
+            let selected = instructorFp.selectedDates[0];
+            if(selected) { $('#instructor_attendance_date').val(flatpickr.formatDate(selected, "Y-m-d")); } 
+            else { $('#instructor_attendance_date').val(todayStr); }
+        });
+
         $('#instructor_id_input').on('change', function() {
-            updateInstructorDateStatus(todayStr);
+            let selectedDateStr = instructorFp.selectedDates.length > 0 
+                ? flatpickr.formatDate(instructorFp.selectedDates[0], "Y-m-d") : todayStr;
+            updateInstructorDateStatus(selectedDateStr);
             instructorFp.redraw();
         });
 
@@ -763,7 +791,6 @@
             const classStartTime = $(this).data('start-time');
             const classEndTime = $(this).data('end-time');
 
-            // Populate Dropdown for Instructors (Assigned vs Substitute)
             let optionsHtml = '';
             allSystemInstructors.forEach(inst => {
                 let isSelected = (String(inst.id) === assignedInstructorId) ? 'selected' : '';
@@ -775,11 +802,8 @@
 
             const rawDays = $(this).data('class-days') || [];
             let classDays = [];
-            if (typeof rawDays === 'string') {
-                try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); }
-            } else if (Array.isArray(rawDays)) {
-                classDays = rawDays;
-            }
+            if (typeof rawDays === 'string') { try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); } } 
+            else if (Array.isArray(rawDays)) { classDays = rawDays; }
 
             $('#instructor_schedule_id').val(scheduleId);
             $('#instructor_attendance_date').val(todayStr);
@@ -791,26 +815,33 @@
             instructorFp.set('enable', [
                 function (date) {
                     const dStr = flatpickr.formatDate(date, "Y-m-d");
+                    const isClassDay = isDateOnClassDay(dStr, classDays);
                     if (classStartDate && dStr < classStartDate) return false;
                     if (classEndDate && dStr > classEndDate) return false;
-                    return isDateOnClassDay(dStr, classDays);
+                    return isClassDay;
                 }
             ]);
 
             instructorFp.setDate(todayStr, false);
             instructorFp.redraw();
+            const submitBtn = $('.confirmInstructorBtn');
 
-            const submitBtn = $('#instructorAttendanceForm button[type="submit"]');
-
-            if (!isWithinDateRange) {
-                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Outside Date Range');
-                submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
-            } else if (!isTodayClassDay) {
-                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Not a Class Day');
-                submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
-            } else if (!isTimeValid) {
-                submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Cannot Record: Outside 30-Min Window');
-                submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
+            if (!isAdmin) {
+                if (!isWithinDateRange) {
+                    submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Outside Date Range');
+                    submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
+                    $('.cancelInstructorBtn').addClass('d-none');
+                } else if (!isTodayClassDay) {
+                    submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Not a Class Day');
+                    submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
+                    $('.cancelInstructorBtn').addClass('d-none');
+                } else if (!isTimeValid) {
+                    submitBtn.prop('disabled', true).html('<i class="fas fa-ban me-1"></i> Outside 30-Min Window');
+                    submitBtn.removeClass('btn-primary btn-secondary').addClass('btn-danger');
+                    $('.cancelInstructorBtn').addClass('d-none');
+                } else {
+                    updateInstructorDateStatus(todayStr);
+                }
             } else {
                 updateInstructorDateStatus(todayStr);
             }
@@ -819,24 +850,18 @@
         });
 
         // ==========================
-        // Open Student Check-In Modal from Unified Dropdown
+        // Modal Student Attendance Audit & Cancel Student Logic
         // ==========================
         $(document).on('click', '.openStudentCheckinModal', function (e) {
             e.preventDefault();
             const classId = $(this).data('class-id');
-            
             let isDateView = $('#viewDateMode').is(':checked');
             let selectedDate = isDateView ? $('#mainTableDateFilter').val() : todayStr;
-
             $('#auditClassSelect').val(classId).trigger('change');
             $('#auditDateSelect').val(selectedDate).trigger('change');
-            
             $('#adminReviewAttendanceModal').modal('show');
         });
 
-        // ==========================
-        // Modal Student Attendance Audit Logic
-        // ==========================
         function renderAuditTable() {
             const classId = $('#auditClassSelect').val();
             const auditDate = $('#auditDateSelect').val();
@@ -845,14 +870,7 @@
             tbody.empty();
 
             if (!classId) {
-                tbody.html(`
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-5">
-                            <i class="fas fa-inbox d-block fs-1 mb-3 text-secondary opacity-50"></i>
-                            Please select a class schedule above to view records.
-                        </td>
-                    </tr>
-                `);
+                tbody.html(`<tr><td colspan="4" class="text-center text-muted py-5"><i class="fas fa-inbox d-block fs-1 mb-3 text-secondary opacity-50"></i>Please select a class schedule above to view records.</td></tr>`);
                 return;
             }
 
@@ -861,53 +879,33 @@
             const classEndDate = selectedOption.data('end');
             const classStartTime = selectedOption.data('start-time');
             const classEndTime = selectedOption.data('end-time');
-
             const rawDays = selectedOption.data('days') || [];
             let classDays = [];
-            if (typeof rawDays === 'string') {
-                try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); }
-            } else if (Array.isArray(rawDays)) { classDays = rawDays; }
+            
+            if (typeof rawDays === 'string') { try { classDays = JSON.parse(rawDays); } catch (err) { classDays = rawDays.split(',').map(d => d.trim()); } } 
+            else if (Array.isArray(rawDays)) { classDays = rawDays; }
 
-            if (classStartDate && classEndDate) {
-                $('#auditDateSelect').attr('min', classStartDate).attr('max', classEndDate);
-            } else {
-                $('#auditDateSelect').removeAttr('min').removeAttr('max');
-            }
+            if (classStartDate && classEndDate) { $('#auditDateSelect').attr('min', classStartDate).attr('max', classEndDate); } 
+            else { $('#auditDateSelect').removeAttr('min').removeAttr('max'); }
 
-            let isWithinClassRange = true;
-            if (classStartDate && classEndDate && auditDate) {
-                isWithinClassRange = (auditDate >= classStartDate && auditDate <= classEndDate);
-            }
-
-            let isDayValid = true;
-            if (auditDate && classDays.length > 0) {
-                isDayValid = isDateOnClassDay(auditDate, classDays);
-            }
-
+            let isWithinClassRange = (classStartDate && classEndDate && auditDate) ? (auditDate >= classStartDate && auditDate <= classEndDate) : true;
+            let isDayValid = (auditDate && classDays.length > 0) ? isDateOnClassDay(auditDate, classDays) : true;
             let isTimeValid = true;
-            if (auditDate === todayStr && classStartTime && classEndTime) {
-                isTimeValid = isWithin30MinWindow(classStartTime, classEndTime);
+
+            if (!isAdmin) {
+                if (auditDate !== todayStr) { isTimeValid = false; } 
+                else if (classStartTime && classEndTime) { isTimeValid = isWithin30MinWindow(classStartTime, classEndTime); }
             }
 
             const canCheckIn = isWithinClassRange && isDayValid && isTimeValid;
-
-            const currentFilteredRecords = allClientRecords.filter(rec =>
-                String(rec.class_id) === String(classId) &&
-                rec.attendance_date === auditDate &&
-                rec.client_id
-            );
-            
+            const currentFilteredRecords = allClientRecords.filter(rec => String(rec.class_id) === String(classId) && rec.attendance_date === auditDate && rec.client_id);
             let matchCount = 0;
 
             allClientsMaster.forEach(client => {
                 const clientClassId = client.selected_class_id;
                 let bookedDate = client.booked_date;
-                if (bookedDate && bookedDate.includes(' ')) {
-                    bookedDate = bookedDate.split(' ')[0];
-                }
-
+                if (bookedDate && bookedDate.includes(' ')) { bookedDate = bookedDate.split(' ')[0]; }
                 if (String(clientClassId) !== String(classId)) return;
-                
                 if (bookedDate && bookedDate !== auditDate) return;
 
                 const user = client.booking_user || client.user;
@@ -916,49 +914,40 @@
                 const studentName = user.name || 'Unknown Student';
 
                 if (searchTerm && !studentName.toLowerCase().includes(searchTerm)) { return; }
-
                 matchCount++;
+
                 const matchingRecord = currentFilteredRecords.find(rec => String(rec.client_id) === studentId);
                 const isRecorded = !!matchingRecord;
-
                 const statusBadge = isRecorded
                     ? '<span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-check-circle me-1"></i> Recorded</span>'
                     : '<span class="badge bg-warning-subtle text-warning border border-warning px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-clock me-1"></i> Not Recorded</span>';
 
                 let actionButton = '';
                 if (isRecorded) {
-                    let recordDateObj = matchingRecord.created_at ? new Date(matchingRecord.created_at) : new Date();
-                    let formattedDateTime = '';
-                    if (recordDateObj && !isNaN(recordDateObj)) {
-                        let dateStr = recordDateObj.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
-                        let timeStr = recordDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        formattedDateTime = `${dateStr}, ${timeStr}`;
-                    }
-                    actionButton = `<span class="text-muted small fw-bold bg-light px-3 py-2 border rounded-pill shadow-sm"><i class="fas fa-history text-secondary me-1"></i> Checked In - ${formattedDateTime}</span>`;
+                    // Action section with Cancel Button for student
+                    actionButton = `
+                        <div class="d-flex align-items-center justify-content-end">
+                            <span class="text-muted small fw-bold bg-light px-3 py-2 border rounded-pill shadow-sm me-2">
+                                <i class="fas fa-history text-secondary me-1"></i> Checked In
+                            </span>
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-pill fw-bold cancelStudentCheckBtn shadow-sm" data-student-id="${studentId}" data-student-name="${studentName}">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </button>
+                        </div>`;
                 } else {
                     if (!canCheckIn) {
-                        if (!isDayValid) {
-                            actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Not a Class Day</span>`;
-                        } else if (!isTimeValid) {
-                            actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Outside 30-Min Window</span>`;
-                        } else {
-                            actionButton = `<span class="badge bg-light text-muted border px-2 py-1">Outside Class Date/Time</span>`;
-                        }
+                        if (!isDayValid) { actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Not a Class Day</span>`; } 
+                        else if (!isTimeValid && auditDate === todayStr) { actionButton = `<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Outside Window</span>`; } 
+                        else { actionButton = `<span class="badge bg-light text-muted border px-2 py-1">Restricted Time</span>`; }
                     } else {
                         actionButton = `<button type="button" class="btn btn-primary btn-sm px-4 py-2 rounded-pill fw-bold quickCheckBtn shadow-sm" data-student-id="${studentId}" data-student-name="${studentName}"><i class="fas fa-check me-1"></i> Check In</button>`;
                     }
                 }
 
-                const displayDate = bookedDate || auditDate;
-
                 tbody.append(`
                     <tr class="border-bottom align-middle bg-white">
                         <td class="fw-bold text-dark ps-4 py-3">${studentName}</td>
-                        <td class="text-center">
-                            <span class="badge bg-light text-primary border border-primary-subtle px-3 py-2 rounded-pill shadow-sm">
-                                <i class="fas fa-calendar-alt me-1"></i> ${displayDate}
-                            </span>
-                        </td>
+                        <td class="text-center"><span class="badge bg-light text-primary border border-primary-subtle px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-calendar-alt me-1"></i> ${bookedDate || auditDate}</span></td>
                         <td class="text-center">${statusBadge}</td>
                         <td class="text-end pe-4">${actionButton}</td>
                     </tr>
@@ -966,70 +955,78 @@
             });
 
             if (matchCount === 0) {
-                tbody.html(`
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-5">
-                            <i class="fas fa-search d-block mb-3 text-secondary opacity-50 fs-1"></i>
-                            No students booked for this class on the selected date (<strong>${auditDate}</strong>).
-                        </td>
-                    </tr>
-                `);
+                tbody.html(`<tr><td colspan="4" class="text-center text-muted py-5"><i class="fas fa-search d-block mb-3 text-secondary opacity-50 fs-1"></i>No students booked for this class on <strong>${auditDate}</strong>.</td></tr>`);
             }
         }
 
         $('#auditClassSelect, #auditDateSelect').on('change', function () { renderAuditTable(); });
         $('#auditSearchInput').on('keyup search input', function () { renderAuditTable(); });
 
+        // Submit Check-In
         $(document).on('click', '.quickCheckBtn', function (e) {
             e.preventDefault();
-            
             const btn = $(this);
             const studentId = btn.data('student-id');
-            const studentName = btn.data('student-name') || 'Student';
+            const studentName = btn.data('student-name');
             const classId = $('#auditClassSelect').val();
             const auditDate = $('#auditDateSelect').val();
 
-            if (!classId || !auditDate) {
-                showAuditAlert("Please select both a class schedule and date before checking in.", "danger");
-                return;
-            }
+            if (!classId || !auditDate) { showAuditAlert("Please select a class and date.", "danger"); return; }
 
             btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Checking in...');
 
             $.ajax({
                 url: $('#quickCheckInForm').attr('action') || "{{ route('attendances.ClientinTime') }}",
                 type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    class_id: classId,
-                    attendance_date: auditDate,
-                    'client_ids[]': [studentId],
-                    client_ids: [studentId],
-                    client_id: studentId
-                },
+                data: { _token: '{{ csrf_token() }}', class_id: classId, attendance_date: auditDate, 'client_ids[]': [studentId], client_ids: [studentId], client_id: studentId },
                 success: function (response) {
-                    const newRecord = {
-                        class_id: classId,
-                        attendance_date: auditDate,
-                        client_id: studentId,
-                        created_at: new Date().toISOString()
-                    };
-                    allClientRecords.push(newRecord);
+                    allClientRecords.push({ class_id: classId, attendance_date: auditDate, client_id: studentId, created_at: new Date().toISOString() });
                     renderAuditTable();
                     showAuditAlert(`Successfully checked in <strong>${studentName}</strong>!`, 'success');
                 },
                 error: function (xhr) {
                     btn.prop('disabled', false).html('<i class="fas fa-check me-1"></i> Check In');
-                    let errorMsg = 'An error occurred while trying to check in.';
-                    if (xhr.responseJSON && xhr.responseJSON.errors) {
-                        const firstKey = Object.keys(xhr.responseJSON.errors)[0];
-                        errorMsg = xhr.responseJSON.errors[firstKey][0];
-                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMsg = xhr.responseJSON.message;
-                    }
+                    let errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Error checking in.';
                     showAuditAlert(`<strong>Error:</strong> ${errorMsg}`, 'danger');
                 }
             });
         });
+
+        // Cancel Student Check-In AJAX
+        $(document).on('click', '.cancelStudentCheckBtn', function (e) {
+            e.preventDefault();
+            if(!confirm('Are you sure you want to cancel this student attendance?')) return;
+
+            const btn = $(this);
+            const studentId = btn.data('student-id');
+            const studentName = btn.data('student-name');
+            const classId = $('#auditClassSelect').val();
+            const auditDate = $('#auditDateSelect').val();
+
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Canceling...');
+
+            $.ajax({
+                url: "{{ route('attendances.cancelClientInTime') ?? '/attendances/cancel-client' }}",
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    class_id: classId,
+                    client_id: studentId,
+                    attendance_date: auditDate
+                },
+                success: function(res) {
+                    showAuditAlert(`Canceled check-in for <strong>${studentName}</strong> successfully!`, 'success');
+                    allClientRecords = allClientRecords.filter(rec => {
+                        return !(String(rec.class_id) === String(classId) && rec.attendance_date === auditDate && String(rec.client_id) === String(studentId));
+                    });
+                    renderAuditTable();
+                },
+                error: function(xhr) {
+                    showAuditAlert('Failed to cancel student check-in.', 'danger');
+                    btn.prop('disabled', false).html('<i class="fas fa-times me-1"></i> Cancel');
+                }
+            });
+        });
+
     });
 </script>

@@ -18,14 +18,15 @@ use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
+    // ==========================================
+    // Customer Reports
+    // ==========================================
     public function getCustomerReport(Request $request)
     {
-        // View မှ လာသော Filter တန်ဖိုးများကို ယူပါမည်
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $categoryId = $request->input('category_id');
 
-        // Customer များနှင့် ၎င်းတို့၏ Purchase များကို Filter စစ်ပြီး ခေါ်ပါမည်
         $customers = User::customersOnly()
             ->with(['purchases' => function ($query) use ($startDate, $endDate, $categoryId) {
                 if ($startDate) {
@@ -34,8 +35,7 @@ class ReportController extends Controller
                 if ($endDate) {
                     $query->whereDate('created_at', '<=', $endDate);
                 }
-                if ($categoryId) {
-                    // Package ၏ Type သည် Category ID ဖြစ်သောကြောင့်
+            if ($categoryId) {
                     $query->whereHas('package', function ($q) use ($categoryId) {
                         $q->where('type', $categoryId);
                     });
@@ -44,20 +44,17 @@ class ReportController extends Controller
             ->latest()
             ->get();
 
-        // Customer တစ်ယောက်ချင်းစီအတွက် Total Package နှင့် Total Amount များကို တွက်ချက်ပါမည်
         $customers->each(function ($customer) {
             $customer->filtered_total_packages = $customer->purchases->count();
             $customer->filtered_total_amount = $customer->purchases->sum('amount');
         });
 
-        // Filter သုံးထားပါက Package ဝယ်ယူထားခြင်းမရှိသူ (Total = 0) များကို Report မှ ဖျောက်ထားပါမည်
         if ($startDate || $endDate || $categoryId) {
             $customers = $customers->filter(function ($customer) {
                 return $customer->filtered_total_packages > 0;
             })->values();
         }
 
-        // Grand Total တွက်ချက်ခြင်း
         $grandTotals = [
             'packages' => $customers->sum('filtered_total_packages'),
             'amount' => $customers->sum('filtered_total_amount'),
@@ -70,7 +67,6 @@ class ReportController extends Controller
 
     public function getCustomerPackagesAjax(Request $request, $id)
     {
-        // View (Ajax) မှ လာသော Filter တန်ဖိုးများကို ယူပါမည်
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $categoryId = $request->input('category_id');
@@ -99,6 +95,9 @@ class ReportController extends Controller
         ]);
     }
 
+    // ==========================================
+    // Sales & Monthly Reports
+    // ==========================================
     public function getTopPackages(Request $request)
     {
         return $this->getMonthlySales($request);
@@ -179,11 +178,13 @@ class ReportController extends Controller
         ));
     }
 
+    // ==========================================
+    // Instructor Reports (Admin View)
+    // ==========================================
     public function getInstructorReport()
     {
-        $instructors = Instructor::with('user')->get();
+        $instructors = Instructor::with(['user', 'categoryFees'])->get();
         $classes = ClassSchedule::with('category')->get();
-        // Instructor Fee config များကို ကြိုတင်ခေါ်ထားပါမည်
         $instructorFees = InstructorCategoryFee::all()->groupBy('instructor_id');
 
         $instructors = $instructors->map(function ($instructor) use ($classes, $instructorFees) {
@@ -204,7 +205,17 @@ class ReportController extends Controller
             $groupedByClass = $attendances->groupBy('class_id');
             $feesConfig = $instructorFees->get($instructorId, collect())->keyBy('category_id');
 
-            $totalFee = 0;
+            $classEarnings = 0;
+
+            // Instructor Type ကို စစ်ဆေးမည်
+            $instructorType = $instructor->instructor_type ?? 'full_time';
+
+            // Full Time ဖြစ်ပါက Base Salary ကို ရှာဖွေမည်
+            $baseSalary = 0;
+            if ($instructorType === 'full_time') {
+                $feeRecord = $instructor->categoryFees->firstWhere('fee_type', 'full_time_fixed');
+                $baseSalary = $feeRecord ? (float) $feeRecord->fee_value : 0;
+            }
 
             foreach ($groupedByClass as $classId => $records) {
                 $firstRecord = $records->first();
@@ -212,40 +223,24 @@ class ReportController extends Controller
 
                 if (!$classSchedule) continue;
 
-                // Booking အတည်ပြုပြီးသော ကျောင်းသားအရေအတွက် (Total Clients)
                 $totalClients = Booking::where('selected_class_id', $classId)->where('status', 'confirmed')->count();
 
-                // Dynamic Bonus Fee တွက်ချက်ခြင်း
-                $bonusFee = 0;
-                $feeConfig = $feesConfig->get($classSchedule->category_id);
-
-                if ($feeConfig && is_array($feeConfig->bonuses)) {
-                    // Threshold အကြီးဆုံးမှ အငယ်သို့စီပြီး တိုက်စစ်မည်
-                    $bonuses = collect($feeConfig->bonuses)->sortByDesc('threshold')->values();
-                    foreach ($bonuses as $b) {
-                        if ($totalClients >= (int)$b['threshold']) {
-                            $bonusFee = (float)$b['amount'];
-                            break;
-                        }
-                    }
-                }
-
-                $studentFees = $records->whereNotNull('client_id')->sum('fee_amount');
-                $dbBonusFee = $records->filter(function ($att) {
-                    return empty($att->client_id);
-                })->sum('fee_amount');
-
-                // Attendance တွင် null ဖြင့် သိမ်းထားတာရှိရင် အဲ့တာကိုသုံးမယ်၊ မရှိရင် Dynamic တွက်ထားတာကိုသုံးမယ်
-                $finalBonusFee = $dbBonusFee > 0 ? $dbBonusFee : $bonusFee;
-
-                $totalFee += ($studentFees + $finalBonusFee);
+                // အတန်းတစ်တန်းစီမှ ရသော Bonus/Percentage ကို တွက်ချက်ခြင်း
+                $classTotalFee = $this->calculateClassFee($classSchedule, $records, $totalClients, $feesConfig);
+                $classEarnings += $classTotalFee;
             }
+
+            // Grand Total (Base Salary + Class Earnings)
+            $grandTotal = $baseSalary + $classEarnings;
 
             return [
                 'id' => $instructor->id,
                 'name' => $instructor->user->name ?? 'Unknown',
+                'type' => $instructorType,
+                'base_salary' => $baseSalary,
+                'class_earnings' => $classEarnings, // Bonus / % စသည့် အတန်းများမှရသောငွေ
+                'grand_total' => $grandTotal,       // စုစုပေါင်းလစာ
                 'total_classes' => $assignedClasses->count(),
-                'total_fee' => $totalFee
             ];
         });
 
@@ -258,6 +253,10 @@ class ReportController extends Controller
             ->where('instructor_id', $instructorId)
             ->get();
 
+        $feesConfig = InstructorCategoryFee::where('instructor_id', $instructorId)
+            ->get()
+            ->keyBy('category_id');
+
         $groupedByClass = $attendances->groupBy('class_id');
         $data = [];
 
@@ -267,34 +266,10 @@ class ReportController extends Controller
 
             if (!$classSchedule) continue;
 
-            $total_clients = Booking::where('selected_class_id', $classId)->where('status', 'confirmed')->count();
+            $totalClients = Booking::where('selected_class_id', $classId)->where('status', 'confirmed')->count();
 
-            // Dynamic Bonus Fee တွက်ချက်ခြင်း
-            $instructorFee = InstructorCategoryFee::where('instructor_id', $instructorId)
-                ->where('category_id', $classSchedule->category_id)
-                ->first();
-
-            $bonusFee = 0;
-            if ($instructorFee && is_array($instructorFee->bonuses)) {
-                $bonuses = collect($instructorFee->bonuses)->sortByDesc('threshold')->values();
-                foreach ($bonuses as $b) {
-                    if ($total_clients >= (int)$b['threshold']) {
-                        $bonusFee = (float)$b['amount'];
-                        break;
-                    }
-                }
-            }
-
-            // Student Fee Total
-            $studentFees = $records->whereNotNull('client_id')->sum('fee_amount');
-
-            // Check Database saved bonus fee
-            $dbBonusFee = $records->filter(function ($att) {
-                return empty($att->client_id);
-            })->sum('fee_amount');
-
-            $finalBonusFee = $dbBonusFee > 0 ? $dbBonusFee : $bonusFee;
-            $totalFee = $studentFees + $finalBonusFee;
+            // အတန်းမှရသော Fee (Bonus သို့မဟုတ် %)
+            $totalFee = $this->calculateClassFee($classSchedule, $records, $totalClients, $feesConfig);
 
             $userBreakdown = $records->whereNotNull('client_id')->map(function ($att) {
                 return [
@@ -311,8 +286,8 @@ class ReportController extends Controller
                 'end_date' => Carbon::parse($classSchedule->end_date)->format('d M Y'),
                 'time' => Carbon::parse($classSchedule->start_time)->format('h:i A') . ' - ' . Carbon::parse($classSchedule->end_time)->format('h:i A'),
                 'total_fee' => $totalFee,
-                'bonus_fee' => $finalBonusFee,
-                'total_clients' => $total_clients,
+                'bonus_fee' => 0,
+                'total_clients' => $totalClients,
                 'breakdown' => $userBreakdown
             ];
         }
@@ -320,6 +295,9 @@ class ReportController extends Controller
         return response()->json($data);
     }
 
+    // ==========================================
+    // Instructor Reports (Instructor Own View Dashboard)
+    // ==========================================
     public function getInstructorReports()
     {
         $instructor = Instructor::where('instructor_id', auth()->user()->id)
@@ -350,7 +328,6 @@ class ReportController extends Controller
             ->groupBy('selected_class_id')
             ->pluck('count', 'selected_class_id');
 
-        // Fetch instructor category fees
         $instructorFees = InstructorCategoryFee::where('instructor_id', $instructorId)
             ->get()
             ->keyBy('category_id');
@@ -359,26 +336,7 @@ class ReportController extends Controller
             $classAttendances = $attendances->get($cls->id, collect());
             $totalClients = $bookingCounts->get($cls->id, 0);
 
-            // Dynamic Bonus Fee တွက်ချက်ခြင်း
-            $feeConfig = $instructorFees->get($cls->category_id);
-            $bonusFee = 0;
-            if ($feeConfig && is_array($feeConfig->bonuses)) {
-                $bonuses = collect($feeConfig->bonuses)->sortByDesc('threshold')->values();
-                foreach ($bonuses as $b) {
-                    if ($totalClients >= (int)$b['threshold']) {
-                        $bonusFee = (float)$b['amount'];
-                        break;
-                    }
-                }
-            }
-
-            $studentFees = $classAttendances->whereNotNull('client_id')->sum('fee_amount');
-            $dbBonusFee = $classAttendances->filter(function ($att) {
-                return empty($att->client_id);
-            })->sum('fee_amount');
-
-            $finalBonusFee = $dbBonusFee > 0 ? $dbBonusFee : $bonusFee;
-            $totalFeePerClass = $studentFees + $finalBonusFee;
+            $totalFeePerClass = $this->calculateClassFee($cls, $classAttendances, $totalClients, $instructorFees);
 
             $userBreakdown = $classAttendances->whereNotNull('client_id')->map(function ($att) {
                 return [
@@ -395,7 +353,7 @@ class ReportController extends Controller
                 'end_date' => Carbon::parse($cls->end_date)->format('d M Y'),
                 'time' => Carbon::parse($cls->start_time)->format('h:i A') . ' - ' . Carbon::parse($cls->end_time)->format('h:i A'),
                 'total_clients' => $totalClients,
-                'bonus_fee' => $finalBonusFee,
+                'bonus_fee' => 0,
                 'total_fee' => $totalFeePerClass,
                 'user_breakdown' => $userBreakdown,
             ];
@@ -412,5 +370,69 @@ class ReportController extends Controller
             'grandTotalFees',
             'grandTotalClients'
         ));
+    }
+
+    // ==========================================
+    // Centralized Calculation Helper
+    // ==========================================
+    private function calculateClassFee($classSchedule, $attendances, $totalClients, $feesConfig)
+    {
+        $feeConfig = $feesConfig->get($classSchedule->category_id);
+        if (!$feeConfig) return 0;
+
+        $calculatedFee = 0;
+        $classRevenue = $attendances->whereNotNull('client_id')->sum('fee_amount');
+
+        $bonuses = [];
+        if (is_array($feeConfig->bonuses)) {
+            $bonuses = collect($feeConfig->bonuses)->sortByDesc('threshold')->values();
+        }
+
+        // 1. Full Time Fixed (Base Salary က Report အဓိကမှာ ပေါင်းပြမှာဖြစ်လို့ ဒီနေရာမှာ Bonus သီးသန့်ပဲ တွက်ပါမယ်)
+        if ($feeConfig->fee_type === 'full_time_fixed') {
+            $bonusFee = 0;
+            foreach ($bonuses as $b) {
+                if ($totalClients >= (int)$b['threshold']) {
+                    $bonusFee = (float)$b['amount'];
+                    break;
+                }
+            }
+            $calculatedFee = $bonusFee; // Bonus per class သာလျှင်ပြန်ပေးမည်
+        }
+        // 2. Part Time Percentage
+        elseif ($feeConfig->fee_type === 'part_time_percentage') {
+            $percentage = (float) $feeConfig->fee_value;
+            $baseRate = $classRevenue * ($percentage / 100);
+
+            $bonusFee = 0;
+            foreach ($bonuses as $b) {
+                if ($totalClients >= (int)$b['threshold']) {
+                    $bonusFee = (float)$b['amount'];
+                    break;
+                }
+            }
+            $calculatedFee = $baseRate + $bonusFee;
+        }
+        // 3. Part Time Tiered Flat Fee
+        elseif ($feeConfig->fee_type === 'part_time_tiered') {
+            $tieredFee = 0;
+            foreach ($bonuses as $b) {
+                if ($totalClients >= (int)$b['threshold']) {
+                    $tieredFee = (float)$b['amount'];
+                    break;
+                }
+            }
+            $calculatedFee = $tieredFee;
+        }
+
+        $dbBonusFee = $attendances->filter(function ($att) {
+            return empty($att->client_id);
+        })->sum('fee_amount');
+
+        if ($dbBonusFee > 0) {
+            $calculatedFee += $dbBonusFee;
+        }
+
+        return $calculatedFee;
     }
 }

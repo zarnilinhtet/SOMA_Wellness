@@ -259,7 +259,6 @@ Route::middleware('auth')->group(function () {
         ProfileController::class,
         'destroy'
     ])->name('profile.destroy');
-
 });
 
 
@@ -300,15 +299,14 @@ Route::middleware([
         WorkshopController::class,
         'index'
     ])->name('workshops.index');
-
 });
 // Class Approval & Cancel
-Route::put('/attendances/class-approve/{classId}', [App\Http\Controllers\AttendanceController::class, 'classApprove'])->name('attendances.classApprove');
-Route::put('/attendances/class-approve-cancel/{classId}', [App\Http\Controllers\AttendanceController::class, 'cancelClassApprove'])->name('attendances.cancelClassApprove');
+Route::put('/attendances/class-approve/{classId}', [AttendanceController::class, 'classApprove'])->name('attendances.classApprove');
+Route::put('/attendances/class-approve-cancel/{classId}', [AttendanceController::class, 'cancelClassApprove'])->name('attendances.cancelClassApprove');
 
 // Admin Approval & Cancel
-Route::put('/attendances/admin-approve/{instructorId}', [App\Http\Controllers\AttendanceController::class, 'adminApprove'])->name('attendances.adminApprove');
-Route::put('/attendances/admin-approve-cancel/{instructorId}', [App\Http\Controllers\AttendanceController::class, 'cancelAdminApprove'])->name('attendances.cancelAdminApprove');
+Route::put('/attendances/admin-approve/{instructorId}', [AttendanceController::class, 'adminApprove'])->name('attendances.adminApprove');
+Route::put('/attendances/admin-approve-cancel/{instructorId}', [AttendanceController::class, 'cancelAdminApprove'])->name('attendances.cancelAdminApprove');
 
 Route::middleware([
     'auth',
@@ -334,7 +332,6 @@ Route::middleware([
         WorkshopController::class,
         'destroy'
     ])->name('workshops.destroy');
-
 });
 
 
@@ -357,7 +354,6 @@ Route::middleware([
         CloseDateController::class,
         'index'
     ])->name('close_dates.index');
-
 });
 
 
@@ -380,7 +376,6 @@ Route::middleware([
         CloseDateController::class,
         'destroy'
     ])->name('close_dates.destroy');
-
 });
 
 
@@ -403,7 +398,6 @@ Route::middleware([
         CommentController::class,
         'approve'
     ])->name('comments.approve');
-
 });
 
 
@@ -421,7 +415,6 @@ Route::middleware([
         CommentController::class,
         'approveComment'
     ])->name('comments.approve.update');
-
 });
 
 
@@ -444,7 +437,6 @@ Route::middleware([
         GalleryController::class,
         'index'
     ])->name('gallery.index');
-
 });
 
 
@@ -467,7 +459,6 @@ Route::middleware([
         GalleryController::class,
         'destroy'
     ])->name('gallery.destroy');
-
 });
 
 
@@ -496,7 +487,6 @@ Route::middleware([
         ClassScheduleController::class,
         'class_schedules_list'
     ])->name('class_schedules_list');
-
 });
 
 
@@ -529,7 +519,6 @@ Route::middleware([
         ClassScheduleController::class,
         'updateInstructors'
     ])->name('schedules.update-instructors');
-
 });
 
 
@@ -553,7 +542,6 @@ Route::middleware([
         InstructorController::class,
         'index'
     ])->name('instructors.index');
-
 });
 
 
@@ -586,7 +574,6 @@ Route::middleware([
         InstructorController::class,
         'destroy'
     ])->name('instructors.destroy');
-
 });
 
 
@@ -614,7 +601,6 @@ Route::middleware([
         EarningsController::class,
         'updateInstructorEarnings'
     ])->name('instructors.earnings.update');
-
 });
 
 
@@ -647,7 +633,6 @@ Route::middleware([
         AttendanceController::class,
         'attendanceDayDetails'
     ])->name('attendances.day-details');
-
 });
 
 
@@ -681,6 +666,16 @@ Route::middleware([
         'ClientinTime'
     ])->name('attendances.ClientinTime');
 
+    // [အသစ်ထည့်ထားသောအပိုင်း] - Attendance Cancel လုပ်ရန် Routes (Instructor နှင့် Student)
+    Route::post('/attendances/cancel-instructor', [
+        AttendanceController::class,
+        'cancelInTime'
+    ])->name('attendances.cancelInTime');
+
+    Route::post('/attendances/cancel-client', [
+        AttendanceController::class,
+        'cancelClientInTime'
+    ])->name('attendances.cancelClientInTime');
 });
 
 
@@ -699,7 +694,6 @@ Route::middleware([
         AttendanceController::class,
         'adminApprove'
     ])->name('attendances.adminApprove');
-
 });
 
 
@@ -722,7 +716,6 @@ Route::middleware([
         PaymentController::class,
         'index'
     ])->name('payments.index');
-
 });
 
 
@@ -745,7 +738,6 @@ Route::middleware([
         PaymentController::class,
         'destroy'
     ])->name('payments.destroy');
-
 });
 
 
@@ -768,7 +760,6 @@ Route::middleware([
         PaymentController::class,
         'managePurchases'
     ])->name('purchases.manage.page');
-
 });
 
 
@@ -786,7 +777,6 @@ Route::middleware([
         PaymentController::class,
         'destroyPurchase'
     ])->name('transactions.destroy');
-
 });
 
 
@@ -809,7 +799,6 @@ Route::middleware([
         CategoryController::class,
         'index'
     ])->name('categories.index');
-
 });
 
 
@@ -832,7 +821,6 @@ Route::middleware([
         CategoryController::class,
         'destroy'
     ])->name('categories.destroy');
-
 });
 
 
@@ -860,7 +848,6 @@ Route::middleware([
         PackageController::class,
         'getClassesByCategory'
     ])->name('packages.get-classes-by-category');
-
 });
 
 
@@ -883,7 +870,6 @@ Route::middleware([
         PackageController::class,
         'destroy'
     ])->name('packages.destroy');
-
 });
 
 
@@ -926,7 +912,6 @@ Route::middleware([
         UserPackageDiscountController::class,
         'update'
     ])->name('discount.update');
-
 });
 
 
@@ -954,7 +939,6 @@ Route::middleware([
         UserController::class,
         'userPackageDetails'
     ])->name('user.package.details');
-
 });
 
 
@@ -978,8 +962,7 @@ Route::middleware([
 
             Route::put('/{id}/update', 'update')->name('update');
 
-            Route::delete('/{id}/destroy', 'destroy')->name('destroy');
-
+        Route::delete('/{id}/destroy', 'destroy')->name('destroy');
         });
 
 
@@ -993,7 +976,6 @@ Route::middleware([
         UserController::class,
         'resetPassword'
     ])->name('user_register.reset_password');
-
 });
 
 
@@ -1021,7 +1003,6 @@ Route::middleware([
         BookingController::class,
         'getWaitList'
     ])->name('waitlist.index');
-
 });
 
 
@@ -1044,7 +1025,6 @@ Route::middleware([
         BookingController::class,
         'adminBookClass'
     ])->name('admin.booking.store');
-
 });
 
 
@@ -1072,7 +1052,6 @@ Route::middleware([
         ReportController::class,
         'getCustomerPackagesAjax'
     ])->name('customer.packages.report');
-
 });
 
 
@@ -1090,7 +1069,6 @@ Route::middleware([
         ReportController::class,
         'getInstructorPackagesAjax'
     ])->name('instructor.packages.report');
-
 });
 
 
@@ -1108,7 +1086,6 @@ Route::middleware([
         ReportController::class,
         'getMonthlySales'
     ])->name('montly.sales');
-
 });
 
 
@@ -1131,7 +1108,6 @@ Route::middleware([
         ReportController::class,
         'getInstructorReports'
     ])->name('instructor.it.reports');
-
 });
 
 

@@ -17,35 +17,27 @@ use Carbon\Carbon;
 
 class ClassScheduleController extends Controller
 {
-    // ==========================================
-    // BACKEND METHODS (Admin & Instructor)
-    // ==========================================
-
     public function index()
     {
         if (auth()->user()->hasRole("Instructor")) {
             $instructor = Instructor::where('instructor_id', auth()->user()->id)->first();
             $instructorId = (string) $instructor->id;
-            $schedules = ClassSchedule::with('category')->get();
+
+            $schedules = ClassSchedule::all();
 
             $filteredSchedules = $schedules->filter(function ($schedule) use ($instructorId) {
-                return isset($schedule->instructor_ids) && in_array($instructorId, $schedule->instructor_ids);
+                $ids = is_string($schedule->instructor_ids) ? json_decode($schedule->instructor_ids, true) : ($schedule->instructor_ids ?? []);
+                return in_array($instructorId, (array)$ids);
             });
 
-            foreach ($filteredSchedules as $schedule) {
-                $schedule->instructor = Instructor::with('user')->whereIn('id', $schedule->instructor_ids ?? [])->get()->toArray();
-            }
-            $instructors = Instructor::with('user')->get();
-            $categories = Category::all();
+            $schedules = $filteredSchedules;
         } else {
-            $schedules = ClassSchedule::with('category')->latest()->get();
-
-            foreach ($schedules as $schedule) {
-                $schedule->instructor = Instructor::with('user')->whereIn('id', $schedule->instructor_ids ?? [])->get()->toArray();
-            }
-            $instructors = Instructor::with('user')->get();
-            $categories = Category::all();
+            $schedules = ClassSchedule::latest()->get();
         }
+
+        $instructors = Instructor::with(['user', 'categoryFees'])->get();
+        $categories = Category::all();
+
         return view('backends.class_schedules.class_schedules_index', compact('schedules', 'instructors', 'categories'));
     }
 
@@ -54,7 +46,8 @@ class ClassScheduleController extends Controller
         $request->validate([
             'instructor_ids' => 'required|array',
             'instructor_ids.*' => 'exists:instructors,id',
-            'category_id' => 'required|exists:categories,id',
+            'category_ids' => 'required|array',
+            'category_ids.*' => 'exists:categories,id',
             'class_name' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -68,7 +61,8 @@ class ClassScheduleController extends Controller
             'image_2' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $data = $request->all();
+        $data = $request->except(['category_id']);
+        $data['category_ids'] = json_encode($request->category_ids);
 
         if ($request->hasFile('image_1')) {
             $data['image_1'] = $this->compressAndSaveImage($request->file('image_1'), 'uploads/schedules');
@@ -87,7 +81,8 @@ class ClassScheduleController extends Controller
         $request->validate([
             'instructor_ids' => 'required|array',
             'instructor_ids.*' => 'exists:instructors,id',
-            'category_id' => 'required|exists:categories,id',
+            'category_ids' => 'required|array',
+            'category_ids.*' => 'exists:categories,id',
             'class_name' => 'required|string|max:255',
             'days' => 'required|array',
             'days.*' => 'string|in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
@@ -101,7 +96,8 @@ class ClassScheduleController extends Controller
             'image_2' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
-        $data = $request->all();
+        $data = $request->except(['category_id']);
+        $data['category_ids'] = json_encode($request->category_ids);
 
         if ($request->remove_image_1 == '1') {
             if ($classSchedule->image_1 && File::exists(public_path($classSchedule->image_1))) {
@@ -153,7 +149,7 @@ class ClassScheduleController extends Controller
             return redirect()->route('login')->with('error', 'You must be logged in to cancel a class.');
         }
 
-        ClassSchedule::where('id', $classSchedule->id)->update(['status' => 'cancelled']);
+        $classSchedule->update(['status' => 'cancelled']);
         return redirect()->back()->with('success', 'Class schedule canceled successfully.');
     }
 
@@ -189,19 +185,6 @@ class ClassScheduleController extends Controller
         return $path . '/' . $filename;
     }
 
-    public function updateInstructors(Request $request, ClassSchedule $classSchedule)
-    {
-        $request->validate([
-            'instructor_ids' => 'required|array',
-            'instructor_ids.*' => 'exists:instructors,id',
-        ]);
-
-        $classSchedule->instructor_ids = $request->input('instructor_ids');
-        $classSchedule->save();
-
-        return redirect()->back()->with('success', 'Instructors updated successfully.');
-    }
-
     public function class_schedules_list(Request $request)
     {
         $now = Carbon::now();
@@ -211,7 +194,7 @@ class ClassScheduleController extends Controller
         $fromDate = $request->input('from_date', $defaultStartDate);
         $toDate = $request->input('to_date', $defaultEndDate);
 
-        $schedules = ClassSchedule::with(['category', 'bookings.user'])
+        $schedules = ClassSchedule::with(['bookings.user'])
             ->whereDate('start_date', '>=', $fromDate)
             ->whereDate('start_date', '<=', $toDate)
             ->orderBy('start_date')
@@ -227,9 +210,8 @@ class ClassScheduleController extends Controller
         $clients = User::whereIn('id', $clientIds)->get()->keyBy('id');
 
         foreach ($schedules as $schedule) {
-            $schedule->instructors = Instructor::with('user')
-                ->whereIn('id', $schedule->instructor_ids ?? [])
-                ->get();
+            $instIds = is_string($schedule->instructor_ids) ? json_decode($schedule->instructor_ids, true) : ($schedule->instructor_ids ?? []);
+            $schedule->instructors = Instructor::with('user')->whereIn('id', (array)$instIds)->get();
 
             $scheduleAttendances = $attendances->where('class_id', $schedule->id);
 
@@ -253,10 +235,8 @@ class ClassScheduleController extends Controller
         $user = User::findOrFail($id);
         $bookings = Booking::where('registered_id', $id)->get();
         $bookingsAll = Booking::all();
-        $classes = ClassSchedule::with('category')->latest()->get();
-        foreach ($classes as $class) {
-            $class->instructor = Instructor::with('user')->whereIn('id', $class->instructor_ids ?? [])->get()->toArray();
-        }
+        $classes = ClassSchedule::latest()->get();
+
         return view('backends.class_schedules.join_class', compact('user', 'classes', 'bookings', 'bookingsAll'));
     }
 
@@ -283,16 +263,19 @@ class ClassScheduleController extends Controller
         $bookingDates = array_map('trim', $bookingDates);
         $totalRequestedClasses = count($bookingDates);
 
-        $categoryMatchExists = Purchase::whereHas('package', function ($query) use ($class) {
-            $query->where('type', $class->category_id);
+        $categoryIds = is_string($class->category_ids) ? json_decode($class->category_ids, true) : ($class->category_ids ?? []);
+        $categoryIds = is_array($categoryIds) ? $categoryIds : [];
+
+        $categoryMatchExists = Purchase::whereHas('package', function ($query) use ($categoryIds) {
+            $query->whereIn('type', $categoryIds);
         })->where('registered_id', $userId)->exists();
 
         if (!$categoryMatchExists) {
-            return redirect()->back()->with('warning', 'The user does not have a package matching this category.');
+            return redirect()->back()->with('warning', 'The user does not have a package matching this class categories.');
         }
 
-        $activePurchase = Purchase::whereHas('package', function ($query) use ($class) {
-            $query->where('type', $class->category_id);
+        $activePurchase = Purchase::whereHas('package', function ($query) use ($categoryIds) {
+            $query->whereIn('type', $categoryIds);
         })
             ->where('registered_id', $userId)
             ->where('pay_status', 'confirmed')
@@ -352,7 +335,6 @@ class ClassScheduleController extends Controller
             }
 
             if ($waitlistedCount > 0 && $confirmedCount == 0) {
-                $user = User::find($userId);
                 return redirect()->back()->with('warning', 'Classes were full on selected dates. Added to waitlist.');
             }
 
@@ -374,8 +356,11 @@ class ClassScheduleController extends Controller
             return response()->json(['status' => false, 'message' => 'User ID is required.'], 400);
         }
 
-        $activePurchase = Purchase::whereHas('package', function ($query) use ($class) {
-            $query->where('type', $class->category_id);
+        $categoryIds = is_string($class->category_ids) ? json_decode($class->category_ids, true) : ($class->category_ids ?? []);
+        $categoryIds = is_array($categoryIds) ? $categoryIds : [];
+
+        $activePurchase = Purchase::whereHas('package', function ($query) use ($categoryIds) {
+            $query->whereIn('type', $categoryIds);
         })
             ->where('registered_id', $userId)
             ->where('pay_status', 'confirmed')
@@ -400,42 +385,36 @@ class ClassScheduleController extends Controller
             'message' => 'User is eligible for this class.',
             'class' => [
                 'id' => $class->id,
-                'name' => $class->class_name ?? $class->name,
-                'category' => $class->category->name ?? 'N/A',
+                'name' => $class->class_name,
                 'capacity' => $class->capacity ?? 0
             ]
         ]);
     }
 
-    // ==========================================
-    // FRONTEND METHODS (Students / Public View)
-    // ==========================================
-
     public function frontendClasses(Request $request)
     {
-        $query = ClassSchedule::with(['category', 'instructor.user'])
+        $query = ClassSchedule::with(['instructor.user'])
             ->where(function ($q) {
-                // အဓိက အချက်: end_date က ယနေ့ (သို့) နောင်လာမည့်ရက် ဖြစ်နေသမျှ 
-                // Admin Approve လို့ status က completed ဖြစ်သွားရင်တောင် List ထဲမှာ ဆက်ပါလာစေရမည်။
                 $q->whereDate('end_date', '>=', Carbon::today('Asia/Yangon'))
                     ->orWhere(function ($subQ) {
                         $subQ->whereNull('end_date')
                             ->whereDate('start_date', '>=', Carbon::today('Asia/Yangon'));
                     });
-            })
-            // Cancel လုပ်ထားတဲ့ အတန်းတွေမှလွဲပြီး ကျန်တဲ့ အတန်းတွေပါ အကုန်ပြမယ်
+        })
             ->where('status', '!=', 'cancelled');
 
-        // Search Filters
         if ($request->filled('search')) {
             $query->where('class_name', 'like', '%' . $request->search . '%');
         }
+
         if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
+            $query->where('category_ids', 'like', '%"' . $request->category . '"%');
         }
+
         if ($request->filled('instructor')) {
-            $query->where('instructor_ids', 'like', '%' . $request->instructor . '%');
+            $query->where('instructor_ids', 'like', '%"' . $request->instructor . '"%');
         }
+
         if ($request->filled('from_date')) {
             $query->where(function ($q) use ($request) {
                 $q->whereDate('end_date', '>=', $request->from_date)
@@ -445,6 +424,7 @@ class ClassScheduleController extends Controller
                     });
             });
         }
+
         if ($request->filled('to_date')) {
             $query->whereDate('start_date', '<=', $request->to_date);
         }
@@ -452,7 +432,8 @@ class ClassScheduleController extends Controller
         $classes = $query->latest()->paginate(10);
 
         foreach ($classes as $class) {
-            $class->instructor = Instructor::with('user')->whereIn('id', $class->instructor_ids ?? [])->get()->toArray();
+            $instIds = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
+            $class->instructor = Instructor::with('user')->whereIn('id', (array)$instIds)->get()->toArray();
         }
 
         $categories = Category::all();

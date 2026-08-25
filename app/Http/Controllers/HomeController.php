@@ -40,7 +40,7 @@ class HomeController extends Controller
     public function class(Request $request)
     {
         $today = Carbon::today('Asia/Yangon');
-        $todayDay = $today->format('D'); // ဥပမာ - 'Mon', 'Tue'
+        $todayDay = $today->format('D');
 
         $completedClassIdsToday = Attendance::whereDate('attendance_date', $today->format('Y-m-d'))
             ->where('admin_approve', 1)
@@ -356,6 +356,9 @@ class HomeController extends Controller
         return view('frontend.payment', compact('payments', 'package', 'redeem', 'onboarding', 'discountPackage'));
     }
 
+    // ==============================================
+    // အောက်ပါ paymentSubmit Function တွင် ပြင်ဆင်ထားပါသည်
+    // ==============================================
     public function paymentSubmit(Request $request)
     {
         $validated = $request->validate([
@@ -373,14 +376,28 @@ class HomeController extends Controller
 
         $packageModel = Package::findOrFail($request->package);
 
-        DB::transaction(function () use ($request, $packageModel) {
+        // --- Image ဓာတ်ပုံကို File System ထဲသို့ သိမ်းဆည်းခြင်း ---
+        $screenshotPath = null;
+        if ($request->hasFile('screenshot')) {
+            $image = $request->file('screenshot');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+
+            // public/uploads/purchases ဆိုတဲ့ ဖိုဒါထဲကို ရွှေ့ပါမယ် (Folder မရှိရင် အလိုလို ဆောက်သွားပါမယ်)
+            $image->move(public_path('uploads/purchases'), $imageName);
+
+            // Database မှာသိမ်းဖို့ Path
+            $screenshotPath = 'uploads/purchases/' . $imageName;
+        }
+        // ----------------------------------------------------
+
+        DB::transaction(function () use ($request, $packageModel, $screenshotPath) {
             Purchase::create([
                 'registered_id' => $request->registered_id,
                 'selected_packages_id' => $request->package,
                 'account_name' => $request->sender_name,
                 'receiver_name' => $request->receiver_name ?? 'N/A',
                 'amount' => $request->amount,
-                'phone' => $request->sender_phone,
+                'phone' => $request->sender_phone ?? '',
                 'transaction_no' => $request->transaction_id ?? 'CASH-' . strtoupper(uniqid()),
                 'payment_method' => $request->gateway_method,
                 'user_discount' => $request->userDiscount ?? 0,
@@ -388,6 +405,7 @@ class HomeController extends Controller
                 'class_remaining' => $packageModel->class_count,
                 'expires_at' => now()->addDays($packageModel->duration),
                 'fix_expires_at' => now()->addDays($packageModel->fix_duration),
+                'screenshot' => $screenshotPath, // <--- ဓာတ်ပုံလမ်းကြောင်းကို ဤနေရာတွင် Database သို့ ထည့်ပါသည်
             ]);
 
             $coinsRequested = (float) $request->coin_used;

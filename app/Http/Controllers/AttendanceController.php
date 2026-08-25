@@ -38,9 +38,10 @@ class AttendanceController extends Controller
             if ($att->attendance_date) {
                 $events[] = [
                     'title' => ($att->instructor->user->name ?? 'Unknown') . ' - Attended',
-                    'start' => $att->created_at ? $att->created_at->format('Y-m-d H:i:s') : $att->attendance_date,
+                    // ပြင်ဆင်ထားသောအပိုင်း: Asia/Yangon Timezone ထည့်သွင်းခြင်း
+                    'start' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d H:i:s') : $att->attendance_date,
                     'color' => '#28a745',
-                    'recorded_at' => $att->created_at ? $att->created_at->format('Y-m-d H:i:s') : null,
+                    'recorded_at' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d h:i A') : null,
                     'is_paid' => $att->is_paid,
                 ];
             }
@@ -91,7 +92,8 @@ class AttendanceController extends Controller
                 'person_name' => $personName,
                 'class_name' => $att->class->class_name ?? 'Unknown Class',
                 'attendance_date' => $att->attendance_date,
-                'recorded_at' => $att->created_at ? $att->created_at->format('Y-m-d h:i A') : null,
+                // ပြင်ဆင်ထားသောအပိုင်း: Asia/Yangon Timezone ထည့်သွင်းခြင်း
+                'recorded_at' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d h:i A') : null,
                 'is_paid' => $att->is_paid ? 'Paid' : 'Unpaid',
                 'attendance_id' => $att->id,
                 'instructor_id' => $att->instructor_id,
@@ -310,7 +312,6 @@ class AttendanceController extends Controller
                 );
             }
 
-            // Bonus logic retroactively applied to the instructor
             $totalStudents = Attendance::where('class_id', $classId)
                 ->where('attendance_date', $attendanceDate)
                 ->whereNotNull('client_id')
@@ -326,6 +327,28 @@ class AttendanceController extends Controller
         }
 
         return back()->with('success', 'Instructor attendance recorded and retroactive fees applied!');
+    }
+
+    public function cancelInTime(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required',
+            'instructor_id' => 'required',
+            'attendance_date' => 'required'
+        ]);
+
+        $attendance = Attendance::where('class_id', $request->class_id)
+            ->where('instructor_id', $request->instructor_id)
+            ->where('attendance_date', $request->attendance_date)
+            ->whereNull('client_id')
+            ->first();
+
+        if ($attendance) {
+            $attendance->delete();
+            return response()->json(['status' => 'success', 'message' => 'Instructor attendance check-in has been canceled!']);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Attendance record not found!'], 404);
     }
 
     public function ClientinTime(Request $request)
@@ -420,7 +443,6 @@ class AttendanceController extends Controller
             }
         }
 
-        // Apply Bonus Amount to Instructor's personal attendance record based on Total Students
         $totalStudents = Attendance::where('class_id', $classId)
             ->where('attendance_date', $attendanceDate)
             ->whereNotNull('client_id')
@@ -447,6 +469,29 @@ class AttendanceController extends Controller
         }
 
         return back()->with('success', $successMsg);
+    }
+
+    public function cancelClientInTime(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required',
+            'client_id' => 'required',
+            'attendance_date' => 'required'
+        ]);
+
+        $attendances = Attendance::where('class_id', $request->class_id)
+            ->where('client_id', $request->client_id)
+            ->where('attendance_date', $request->attendance_date)
+            ->get();
+
+        if ($attendances->count() > 0) {
+            foreach ($attendances as $att) {
+                $att->delete();
+            }
+            return response()->json(['status' => 'success', 'message' => 'Student check-in has been canceled!']);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Record not found!'], 404);
     }
 
     public function attendanceStats()

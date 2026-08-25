@@ -7,33 +7,62 @@
 
 <style>
     /* Select2 Customization */
-    .select2-container .select2-selection--single { height: 38px; border: 1px solid #ebedf2; padding: 5px; }
-    .select2-container--default .select2-selection--single .select2-selection__arrow { top: 5px; }
+    .select2-container .select2-selection--multiple {
+        height: auto;
+        min-height: 38px;
+        border: 1px solid #ebedf2;
+        padding: 5px;
+    }
 
     /* View Modal Clean UI Customization */
-    .view-modal-header { background-color: #f8f9fa; border-bottom: 2px solid #e9ecef; }
-    .info-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; margin-bottom: 3px; display: block; }
-    .info-value { font-size: 1.05rem; font-weight: 500; color: #212529; }
-    .detail-card { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; height: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    
+    .view-modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .info-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        margin-bottom: 3px;
+        display: block;
+    }
+
+    .info-value {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: #212529;
+    }
+
+    .detail-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
     /* DataTable Buttons Customization */
-    .dt-buttons .btn { margin-right: 5px; }
+    .dt-buttons .btn {
+        margin-right: 5px;
+    }
 </style>
 
 @include('master.sidebar')
 @include('master.nav')
 
 <div class="container">
-<div class="page-inner">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        
-        <!-- Page Title with Icon -->
-        <h4 class="fw-bold mb-0 text-dark">
-            <i class="fas fa-calendar-alt me-2 text-primary"></i> Manage Class Schedules
-        </h4>
+    <div class="page-inner">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- Page Title with Icon -->
+            <h4 class="fw-bold mb-0 text-dark">
+                <i class="fas fa-calendar-alt me-2 text-primary"></i> Manage Class Schedules
+            </h4>
 
-        <!-- Action Buttons Group -->
-        @if(auth()->user()->hasPermission('schedule_register'))
+            <!-- Action Buttons Group -->
+            @if(auth()->user()->hasPermission('schedule_register'))
             <div class="d-flex gap-2">
                 <!-- Class Schedule List Button -->
                 <a href="{{ route('class_schedules_list') }}" class="btn btn-outline-secondary shadow-sm">
@@ -45,137 +74,160 @@
                     <i class="fas fa-plus-circle me-1"></i> New Schedule
                 </button>
             </div>
-        @endif
-
+            @endif
+        </div>
     </div>
-</div>
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        
-        @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <ul class="mb-0">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="basic-datatables" style="min-width: 1200px;">
-                        <thead>
-                            <tr>
-                                <th>No.</th>
-                                <th>Image</th>
-                                <th>Class Name</th>
-                                <th>Category</th>
-                                <th>Date (Start - End)</th>
-                                <th>Days of Week</th>
-                                <th>Time</th>
-                                <th>Instructors</th>
-                                <th>Capacity</th>
-                                <th>Status</th>
-                                <th class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($schedules as $schedule)
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>
-                                        @if($schedule->image_1)
-                                            <img src="{{ asset($schedule->image_1) }}" alt="Class Image" class="rounded object-fit-cover" width="50" height="50">
-                                        @else
-                                            <div class="bg-light rounded d-flex align-items-center justify-content-center text-muted" style="width: 50px; height: 50px; font-size: 10px;">No Img</div>
-                                        @endif
-                                    </td>
-                                    <td><span class="fw-bold d-block">{{ Str::limit($schedule->class_name, 20) }}</span></td>
-                                    
-                                    {{-- Category Column --}}
-                                    <td><span class="badge bg-secondary">{{ $schedule->category->name ?? 'N/A' }}</span></td>
-                                    <td>
-                                        <span class="d-block text-primary" style="font-size: 0.9rem;">
-                                            {{ \Carbon\Carbon::parse($schedule->start_date)->format('d M Y') }} <br>
-                                            <span class="text-muted text-center d-block">to</span>
-                                            {{ $schedule->end_date ? \Carbon\Carbon::parse($schedule->end_date)->format('d M Y') : 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @php
-                                            $days = is_string($schedule->days) ? json_decode($schedule->days, true) : ($schedule->days ?? []);
-                                        @endphp
+    @if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
 
-                                        @foreach ($days as $day)
-                                            <span class="badge bg-info text-white me-1">{{ $day }}</span>
-                                        @endforeach
-                                    </td>
-                                    <td>
-                                        <small class="text-dark fw-bold">
-                                            {{ \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') }} - 
-                                            {{ $schedule->end_time ? \Carbon\Carbon::parse($schedule->end_time)->format('h:i A') : 'N/A' }}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        @if(!empty($schedule->instructor) && is_array($schedule->instructor))
-                                            @foreach ($schedule->instructor as $inst)
-                                                <span class="badge bg-info text-white me-1">
-                                                    {{ $inst['user']['name'] ?? 'N/A' }}
-                                                </span>
-                                            @endforeach
-                                        @endif
-                                    </td>
-                                    <td>{{ $schedule->capacity }}</td>
-                                    <td>
-                                        <span class="badge {{ strtolower($schedule->status) == 'book' ? 'bg-primary' : (strtolower($schedule->status) == 'completed' ? 'bg-success' : 'bg-danger') }}">
-                                            {{ ucfirst($schedule->status) }}
-                                        </span>
-                                    </td>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="basic-datatables" style="min-width: 1200px;">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Image</th>
+                            <th>Class Name</th>
+                            <th>Categories</th>
+                            <th>Date (Start - End)</th>
+                            <th>Days of Week</th>
+                            <th>Time</th>
+                            <th>Instructors</th>
+                            <th>Capacity</th>
+                            <th>Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($schedules as $schedule)
+                        <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>
+                                @if($schedule->image_1)
+                                <img src="{{ asset($schedule->image_1) }}" alt="Class Image" class="rounded object-fit-cover" width="50" height="50">
+                                @else
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center text-muted" style="width: 50px; height: 50px; font-size: 10px;">No Img</div>
+                                @endif
+                            </td>
+                            <td><span class="fw-bold d-block">{{ Str::limit($schedule->class_name, 20) }}</span></td>
 
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-4">
-                                            <button type="button" class="btn btn-link btn-info p-0" data-bs-toggle="modal" data-bs-target="#viewScheduleModal{{ $schedule->id }}" title="View Details">
-                                                <i class="fa fa-eye fs-5"></i>
-                                            </button>
+                            {{-- Multiple Categories Badges --}}
+                            <td>
+                                @php
+                                    $rawCats = $schedule->category_ids ?? $schedule->category_id ?? [];
+                                    $decodedCats = is_string($rawCats) ? json_decode($rawCats, true) : $rawCats;
+                                    $decodedCats = is_string($decodedCats) ? json_decode($decodedCats, true) : $decodedCats;
+                                    $catIds = array_map('strval', is_array($decodedCats) ? $decodedCats : (empty($rawCats) ? [] : [$rawCats]));
+                                    $scheduleCategories = $categories->filter(fn($c) => in_array((string)$c->id, $catIds));
+                                @endphp
+                                @forelse($scheduleCategories as $cat)
+                                    <span class="badge bg-secondary mb-1 d-inline-block">{{ $cat->name }}</span>
+                                @empty
+                                    <span class="text-muted small">None</span>
+                                @endforelse
+                            </td>
 
-                                            @if(auth()->user()->hasPermission('schedule_edit'))
-                                                <button type="button" class="btn btn-link btn-primary p-0" data-bs-toggle="modal" data-bs-target="#editScheduleModal{{ $schedule->id }}" title="Edit">
-                                                    <i class="fa fa-edit fs-5"></i>
-                                                </button>
-                                            @endif
+                            <td>
+                                <span class="d-block text-primary" style="font-size: 0.9rem;">
+                                    {{ \Carbon\Carbon::parse($schedule->start_date)->format('d M Y') }} <br>
+                                    <span class="text-muted text-center d-block">to</span>
+                                    {{ $schedule->end_date ? \Carbon\Carbon::parse($schedule->end_date)->format('d M Y') : 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                @php
+                                    $rawDays = $schedule->days ?? [];
+                                    $decodedDays = is_string($rawDays) ? json_decode($rawDays, true) : $rawDays;
+                                    $decodedDays = is_string($decodedDays) ? json_decode($decodedDays, true) : $decodedDays;
+                                    $days = is_array($decodedDays) ? $decodedDays : (empty($rawDays) ? [] : [$rawDays]);
+                                @endphp
 
-                                            @if(auth()->user()->hasPermission('schedule_delete'))
-                                                <form action="{{ route('class_schedules.destroy', $schedule->id) }}" method="POST" class="d-inline">
-                                                    @csrf @method('DELETE')
-                                                    <button type="submit" class="btn btn-link btn-danger p-0" onclick="return confirm('Are you sure you want to delete this schedule?')" title="Delete">
-                                                        <i class="fa fa-trash fs-5"></i>
-                                                    </button>
-                                                </form>
-                                            @endif
+                                @foreach ($days as $day)
+                                <span class="badge bg-info text-white me-1">{{ $day }}</span>
+                                @endforeach
+                            </td>
+                            <td>
+                                <small class="text-dark fw-bold">
+                                    {{ \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') }} -
+                                    {{ $schedule->end_time ? \Carbon\Carbon::parse($schedule->end_time)->format('h:i A') : 'N/A' }}
+                                </small>
+                            </td>
+                            
+                            {{-- Multiple Instructors Badges --}}
+                            <td>
+                                @php
+                                    $rawInsts = $schedule->instructor_ids ?? [];
+                                    $decodedInsts = is_string($rawInsts) ? json_decode($rawInsts, true) : $rawInsts;
+                                    $decodedInsts = is_string($decodedInsts) ? json_decode($decodedInsts, true) : $decodedInsts;
+                                    $instIds = array_map('strval', is_array($decodedInsts) ? $decodedInsts : (empty($rawInsts) ? [] : [$rawInsts]));
+                                    $scheduleInstructors = $instructors->filter(fn($i) => in_array((string)$i->id, $instIds));
+                                @endphp
+                                @forelse ($scheduleInstructors as $inst)
+                                    <span class="badge bg-info text-white me-1 mb-1 d-inline-block">{{ $inst->user->name ?? 'N/A' }}</span>
+                                @empty
+                                    <span class="text-muted small">None</span>
+                                @endforelse
+                            </td>
+                            
+                            <td>{{ $schedule->capacity }}</td>
+                            <td>
+                                <span class="badge {{ strtolower($schedule->status) == 'book' ? 'bg-primary' : (strtolower($schedule->status) == 'completed' ? 'bg-success' : 'bg-danger') }}">
+                                    {{ ucfirst($schedule->status) }}
+                                </span>
+                            </td>
 
-                                             @if(auth()->user()->hasPermission('schedule_delete') && \Carbon\Carbon::parse($schedule->start_date . ' ' . ($schedule->start_time ?? '00:00:00'))->subHours(48)->isFuture())
-                                             <form action="{{ route('class_schedules.cancel', $schedule->id) }}" method="POST" class="d-inline">
-                                                @csrf @method('PUT')
-                                                <button type="submit" class="btn btn-link btn-success p-0" title="Cancel">
-                                                    Cancel
-                                                </button>
-                                            </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-4">
+                                    <button type="button" class="btn btn-link btn-info p-0" data-bs-toggle="modal" data-bs-target="#viewScheduleModal{{ $schedule->id }}" title="View Details">
+                                        <i class="fa fa-eye fs-5"></i>
+                                    </button>
+
+                                    @if(auth()->user()->hasPermission('schedule_edit'))
+                                    <button type="button" class="btn btn-link btn-primary p-0" data-bs-toggle="modal" data-bs-target="#editScheduleModal{{ $schedule->id }}" title="Edit">
+                                        <i class="fa fa-edit fs-5"></i>
+                                    </button>
+                                    @endif
+
+                                    @if(auth()->user()->hasPermission('schedule_delete'))
+                                    <form action="{{ route('class_schedules.destroy', $schedule->id) }}" method="POST" class="d-inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn btn-link btn-danger p-0" onclick="return confirm('Are you sure you want to delete this schedule?')" title="Delete">
+                                            <i class="fa fa-trash fs-5"></i>
+                                        </button>
+                                    </form>
+                                    @endif
+
+                                    @if(auth()->user()->hasPermission('schedule_delete') && \Carbon\Carbon::parse($schedule->start_date . ' ' . ($schedule->start_time ?? '00:00:00'))->subHours(48)->isFuture())
+                                    <form action="{{ route('class_schedules.cancel', $schedule->id) }}" method="POST" class="d-inline">
+                                        @csrf @method('PUT')
+                                        <button type="submit" class="btn btn-link btn-success p-0" title="Cancel">
+                                            Cancel
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -188,24 +240,52 @@
 <div class="modal fade" id="viewScheduleModal{{ $schedule->id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            
+
             <div class="modal-header view-modal-header py-3 px-4">
                 <h5 class="fw-bold mb-0 text-dark">
-                    {{ $schedule->class_name }} <span class="badge bg-secondary fs-6 ms-2">{{ $schedule->category->name ?? 'N/A' }}</span>
+                    {{ $schedule->class_name }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body p-4 bg-light">
-                
+
                 <div class="row g-3 mb-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="detail-card">
+                            <span class="info-label"><i class="fas fa-tags me-1"></i> Categories</span>
+                            <span class="info-value">
+                                @php
+                                    $rawCats = $schedule->category_ids ?? $schedule->category_id ?? [];
+                                    $decodedCats = is_string($rawCats) ? json_decode($rawCats, true) : $rawCats;
+                                    $decodedCats = is_string($decodedCats) ? json_decode($decodedCats, true) : $decodedCats;
+                                    $catIds = array_map('strval', is_array($decodedCats) ? $decodedCats : (empty($rawCats) ? [] : [$rawCats]));
+                                    $scheduleCategories = $categories->filter(fn($c) => in_array((string)$c->id, $catIds));
+                                @endphp
+                                @forelse($scheduleCategories as $cat) 
+                                    <span class="badge bg-secondary text-white d-inline-block mb-1">{{ $cat->name }}</span> 
+                                @empty
+                                    <span class="text-muted fs-6">None</span>
+                                @endforelse
+                            </span>
+                        </div>
+                    </div>
                     <div class="col-md-6 col-lg-3">
                         <div class="detail-card">
                             <span class="info-label"><i class="fas fa-user-tie me-1"></i> Instructor</span>
                             <span class="info-value">
-                                @foreach ($schedule->instructor as $inst)
-                                    <span class="badge bg-info text-white">{{ $inst['user']['name'] ?? 'N/A' }}</span>
-                                @endforeach
+                                @php
+                                    $rawInsts = $schedule->instructor_ids ?? [];
+                                    $decodedInsts = is_string($rawInsts) ? json_decode($rawInsts, true) : $rawInsts;
+                                    $decodedInsts = is_string($decodedInsts) ? json_decode($decodedInsts, true) : $decodedInsts;
+                                    $instIds = array_map('strval', is_array($decodedInsts) ? $decodedInsts : (empty($rawInsts) ? [] : [$rawInsts]));
+                                    $scheduleInstructors = $instructors->filter(fn($i) => in_array((string)$i->id, $instIds));
+                                @endphp
+                                @forelse($scheduleInstructors as $inst)
+                                    <span class="badge bg-info text-white d-inline-block mb-1">{{ $inst->user->name ?? 'N/A' }}</span>
+                                @empty
+                                    <span class="text-muted fs-6">None</span>
+                                @endforelse
                             </span>
                         </div>
                     </div>
@@ -213,26 +293,18 @@
                         <div class="detail-card">
                             <span class="info-label"><i class="fas fa-calendar-day me-1"></i> Date Range</span>
                             <span class="info-value d-block" style="font-size: 0.95rem;">
-                                {{ \Carbon\Carbon::parse($schedule->start_date)->format('d M Y') }} <br>to<br> 
+                                {{ \Carbon\Carbon::parse($schedule->start_date)->format('d M Y') }} <br>to<br>
                                 {{ $schedule->end_date ? \Carbon\Carbon::parse($schedule->end_date)->format('d M Y') : 'N/A' }}
                             </span>
                         </div>
                     </div>
-
-                    
                     <div class="col-md-6 col-lg-3">
                         <div class="detail-card">
                             <span class="info-label"><i class="fas fa-clock me-1"></i> Time</span>
                             <span class="info-value text-nowrap">
-                                {{ \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') }} <br>-<br> 
+                                {{ \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') }} <br>-<br>
                                 {{ $schedule->end_time ? \Carbon\Carbon::parse($schedule->end_time)->format('h:i A') : 'N/A' }}
                             </span>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="detail-card">
-                            <span class="info-label"><i class="fas fa-users me-1"></i> Capacity</span>
-                            <span class="info-value">{{ $schedule->capacity }} Persons</span>
                         </div>
                     </div>
                 </div>
@@ -250,38 +322,38 @@
                 </div>
 
                 @if($schedule->image_1 || $schedule->image_2)
-                    <h6 class="fw-bold mb-3 ms-1 text-secondary">Attached Images</h6>
-                    <div class="row g-3">
-                        @if($schedule->image_1)
-                            <div class="col-sm-6">
-                                <div class="card border-0 shadow-sm">
-                                    <img src="{{ asset($schedule->image_1) }}" class="card-img-top object-fit-cover" style="height: 200px;">
-                                    <div class="card-body p-2 text-center">
-                                        <a href="{{ asset($schedule->image_1) }}" download="Image_1_{{ $schedule->class_name }}" class="btn btn-outline-success btn-sm w-100">
-                                            <i class="fa fa-download me-1"></i> Download
-                                        </a>
-                                    </div>
-                                </div>
+                <h6 class="fw-bold mb-3 ms-1 text-secondary">Attached Images</h6>
+                <div class="row g-3">
+                    @if($schedule->image_1)
+                    <div class="col-sm-6">
+                        <div class="card border-0 shadow-sm">
+                            <img src="{{ asset($schedule->image_1) }}" class="card-img-top object-fit-cover" style="height: 200px;">
+                            <div class="card-body p-2 text-center">
+                                <a href="{{ asset($schedule->image_1) }}" download="Image_1_{{ $schedule->class_name }}" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fa fa-download me-1"></i> Download
+                                </a>
                             </div>
-                        @endif
-
-                        @if($schedule->image_2)
-                            <div class="col-sm-6">
-                                <div class="card border-0 shadow-sm">
-                                    <img src="{{ asset($schedule->image_2) }}" class="card-img-top object-fit-cover" style="height: 200px;">
-                                    <div class="card-body p-2 text-center">
-                                        <a href="{{ asset($schedule->image_2) }}" download="Image_2_{{ $schedule->class_name }}" class="btn btn-outline-success btn-sm w-100">
-                                            <i class="fa fa-download me-1"></i> Download
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
+                        </div>
                     </div>
+                    @endif
+
+                    @if($schedule->image_2)
+                    <div class="col-sm-6">
+                        <div class="card border-0 shadow-sm">
+                            <img src="{{ asset($schedule->image_2) }}" class="card-img-top object-fit-cover" style="height: 200px;">
+                            <div class="card-body p-2 text-center">
+                                <a href="{{ asset($schedule->image_2) }}" download="Image_2_{{ $schedule->class_name }}" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fa fa-download me-1"></i> Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
                 @endif
 
             </div>
-            
+
             <div class="modal-footer bg-white py-2">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
             </div>
@@ -294,138 +366,146 @@
 {{-- EDIT MODALS --}}
 {{-- ========================================== --}}
 @if(auth()->user()->hasPermission('schedule_edit'))
-    @foreach ($schedules as $schedule)
-        <div class="modal fade" id="editScheduleModal{{ $schedule->id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
-                <form action="{{ route('class_schedules.update', $schedule->id) }}" method="POST" enctype="multipart/form-data" class="modal-content">
-                    @csrf @method('PUT')
-                    <div class="modal-header">
-                        <h5 class="fw-bold">Edit Class Schedule</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+@foreach ($schedules as $schedule)
+<div class="modal fade" id="editScheduleModal{{ $schedule->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <form action="{{ route('class_schedules.update', $schedule->id) }}" method="POST" enctype="multipart/form-data" class="modal-content">
+            @csrf @method('PUT')
+            <div class="modal-header">
+                <h5 class="fw-bold">Edit Class Schedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-start">
+                <div class="row g-3">
+                    <div class="col-md-4 mb-3">
+                        <label class="fw-bold">Class Name <span class="text-danger">*</span></label>
+                        <input type="text" name="class_name" placeholder="Enter Class Name" class="form-control" value="{{ $schedule->class_name }}" required>
                     </div>
-                    <div class="modal-body text-start">
-                        <div class="row g-3">
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold">Class Name <span class="text-danger">*</span></label>
-                                <input type="text" name="class_name" placeholder="Enter Class Name" class="form-control" value="{{ $schedule->class_name }}" required>
-                            </div>
 
-                            {{-- Category Dropdown --}}
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold d-block">Category <span class="text-danger">*</span></label>
-                                <select name="category_id" class="form-select select2-dropdown" style="width: 100%;" required>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" {{ $schedule->category_id == $category->id ? 'selected' : '' }}>
-                                            {{ $category->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                    {{-- Categories Dropdown (Multiple) --}}
+                    @php
+                        $rawCats = $schedule->category_ids ?? $schedule->category_id ?? [];
+                        $decodedCats = is_string($rawCats) ? json_decode($rawCats, true) : $rawCats;
+                        $decodedCats = is_string($decodedCats) ? json_decode($decodedCats, true) : $decodedCats;
+                        $selCats = array_map('strval', is_array($decodedCats) ? $decodedCats : (empty($rawCats) ? [] : [$rawCats]));
+                    @endphp
+                    <div class="col-md-4 mb-3">
+                        <label class="fw-bold d-block">Categories <span class="text-danger">*</span></label>
+                        <select name="category_ids[]" multiple class="form-select select2-dropdown category-select" style="width: 100%;" required>
+                            @foreach($categories as $category)
+                            <option value="{{ $category->id }}" {{ in_array((string)$category->id, $selCats) ? 'selected' : '' }}>
+                                {{ $category->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                            <div class="col-md-4 mb-3">
-                                <label class="fw-bold d-block">Instructor <span class="text-danger">*</span></label>
-                                <select name="instructor_ids[]" multiple class="form-select select2-dropdown" style="width: 100%;" required>
-                                    @foreach($instructors as $instructor)
-                                        <option value="{{ $instructor->id }}" {{ in_array($instructor->id, $schedule->instructor_ids) ? 'selected' : '' }}>
-                                            {{ $instructor->user->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                    {{-- Instructors Dropdown (Multiple) --}}
+                    @php
+                        $rawInsts = $schedule->instructor_ids ?? [];
+                        $decodedInsts = is_string($rawInsts) ? json_decode($rawInsts, true) : $rawInsts;
+                        $decodedInsts = is_string($decodedInsts) ? json_decode($decodedInsts, true) : $decodedInsts;
+                        $selInsts = array_map('strval', is_array($decodedInsts) ? $decodedInsts : (empty($rawInsts) ? [] : [$rawInsts]));
+                    @endphp
+                    <div class="col-md-4 mb-3">
+                        <label class="fw-bold d-block">Instructor <span class="text-danger">*</span></label>
+                        <select name="instructor_ids[]" id="edit_instructor_select_{{ $schedule->id }}" multiple class="form-select select2-dropdown instructor-select" style="width: 100%;" required data-preselected="{{ json_encode($selInsts) }}">
+                            <!-- Options empty explicitly for JS populating -->
+                        </select>
+                    </div>
 
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">Start Date </label>
-                                <input type="date" name="start_date" class="form-control" value="{{ $schedule->start_date }}" >
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="fw-bold">Start Date </label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $schedule->start_date }}" required>
+                    </div>
 
-                            <div class="col-md-3 mb-3">
-                                <label class="fw-bold">End Date</label>
-                                <input type="date" name="end_date" class="form-control" value="{{ $schedule->end_date }}" >
-                            </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="fw-bold">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $schedule->end_date }}">
+                    </div>
 
-                            <div class="col-md-6 mb-3">
-                                @php
-                                    $daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                                    
-                                    // Safely decode JSON string to array if it's not casted on the model
-                                    $selectedDays = is_string($schedule->days) 
-                                        ? json_decode($schedule->days, true) 
-                                        : ($schedule->days ?? []);
-                                @endphp
+                    <div class="col-md-6 mb-3">
+                        @php
+                            $rawDays = $schedule->days ?? [];
+                            $decodedDays = is_string($rawDays) ? json_decode($rawDays, true) : $rawDays;
+                            $decodedDays = is_string($decodedDays) ? json_decode($decodedDays, true) : $decodedDays;
+                            $selectedDays = is_array($decodedDays) ? $decodedDays : (empty($rawDays) ? [] : [$rawDays]);
+                            $daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                        @endphp
 
-                                <label class="fw-bold d-block">Days of Week <span class="text-danger">*</span></label>
-                                <select name="days[]" multiple class="form-select select2-dropdown" style="width: 100%;" required>
-                                    @foreach($daysOfWeek as $day)
-                                        <option value="{{ $day }}" 
-                                            {{ in_array($day, (array)$selectedDays) ? 'selected' : '' }}>
-                                            {{ $day }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                        <label class="fw-bold d-block">Days of Week <span class="text-danger">*</span></label>
+                        <select name="days[]" multiple class="form-select select2-dropdown" style="width: 100%;" required>
+                            @foreach($daysOfWeek as $day)
+                            <option value="{{ $day }}"
+                                {{ in_array($day, $selectedDays) ? 'selected' : '' }}>
+                                {{ $day }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Time (Start - End)</label>
-                                <div class="d-flex gap-2">
-                                    <input type="time" name="start_time" class="form-control" value="{{ $schedule->start_time }}" required>
-                                    <input type="time" name="end_time" class="form-control" value="{{ $schedule->end_time }}" >
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Capacity</label>
-                                <input type="number" name="capacity" class="form-control" value="{{ $schedule->capacity }}" required>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Status</label>
-                                <select name="status" class="form-select" required>
-                                    <option value="book" {{ strtolower($schedule->status) == 'book' ? 'selected' : '' }}>Book</option>
-                                    <option value="completed" {{ strtolower($schedule->status) == 'completed' ? 'selected' : '' }}>Completed</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12 mb-3">
-                                <label class="fw-bold">Description</label>
-                                <textarea name="description" class="form-control summernote">{{ $schedule->description }}</textarea>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Image 1</label>
-                                <input type="file" name="image_1" id="file_input_1_{{ $schedule->id }}" class="form-control" accept="image/*" onchange="previewNewImage(this, 'edit_preview_1_{{ $schedule->id }}')">
-                                <input type="hidden" name="remove_image_1" id="remove_image_1_{{ $schedule->id }}" value="0">
-                                
-                                <div class="mt-2 position-relative d-inline-block" id="container_image_1_{{ $schedule->id }}" style="{{ !$schedule->image_1 ? 'display:none;' : '' }}">
-                                    <img src="{{ $schedule->image_1 ? asset($schedule->image_1) : '' }}" id="edit_preview_1_{{ $schedule->id }}" class="img-thumbnail object-fit-cover" width="120" height="120">
-                                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeExistingImage('1', '{{ $schedule->id }}')" title="Remove Image">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="fw-bold">Image 2</label>
-                                <input type="file" name="image_2" id="file_input_2_{{ $schedule->id }}" class="form-control" accept="image/*" onchange="previewNewImage(this, 'edit_preview_2_{{ $schedule->id }}')">
-                                <input type="hidden" name="remove_image_2" id="remove_image_2_{{ $schedule->id }}" value="0">
-                                
-                                <div class="mt-2 position-relative d-inline-block" id="container_image_2_{{ $schedule->id }}" style="{{ !$schedule->image_2 ? 'display:none;' : '' }}">
-                                    <img src="{{ $schedule->image_2 ? asset($schedule->image_2) : '' }}" id="edit_preview_2_{{ $schedule->id }}" class="img-thumbnail object-fit-cover" width="120" height="120">
-                                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeExistingImage('2', '{{ $schedule->id }}')" title="Remove Image">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Time (Start - End)</label>
+                        <div class="d-flex gap-2">
+                            <input type="time" name="start_time" class="form-control" value="{{ $schedule->start_time }}" required>
+                            <input type="time" name="end_time" class="form-control" value="{{ $schedule->end_time }}">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Schedule</button>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Capacity</label>
+                        <input type="number" name="capacity" class="form-control" value="{{ $schedule->capacity }}" required>
                     </div>
-                </form>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Status</label>
+                        <select name="status" class="form-select" required>
+                            <option value="book" {{ strtolower($schedule->status) == 'book' ? 'selected' : '' }}>Book</option>
+                            <option value="completed" {{ strtolower($schedule->status) == 'completed' ? 'selected' : '' }}>Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <label class="fw-bold">Description</label>
+                        <textarea name="description" class="form-control summernote">{{ $schedule->description }}</textarea>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Image 1</label>
+                        <input type="file" name="image_1" id="file_input_1_{{ $schedule->id }}" class="form-control" accept="image/*" onchange="previewNewImage(this, 'edit_preview_1_{{ $schedule->id }}')">
+                        <input type="hidden" name="remove_image_1" id="remove_image_1_{{ $schedule->id }}" value="0">
+
+                        <div class="mt-2 position-relative d-inline-block" id="container_image_1_{{ $schedule->id }}" style="{{ !$schedule->image_1 ? 'display:none;' : '' }}">
+                            <img src="{{ $schedule->image_1 ? asset($schedule->image_1) : '' }}" id="edit_preview_1_{{ $schedule->id }}" class="img-thumbnail object-fit-cover" width="120" height="120">
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeExistingImage('1', '{{ $schedule->id }}')" title="Remove Image">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Image 2</label>
+                        <input type="file" name="image_2" id="file_input_2_{{ $schedule->id }}" class="form-control" accept="image/*" onchange="previewNewImage(this, 'edit_preview_2_{{ $schedule->id }}')">
+                        <input type="hidden" name="remove_image_2" id="remove_image_2_{{ $schedule->id }}" value="0">
+
+                        <div class="mt-2 position-relative d-inline-block" id="container_image_2_{{ $schedule->id }}" style="{{ !$schedule->image_2 ? 'display:none;' : '' }}">
+                            <img src="{{ $schedule->image_2 ? asset($schedule->image_2) : '' }}" id="edit_preview_2_{{ $schedule->id }}" class="img-thumbnail object-fit-cover" width="120" height="120">
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeExistingImage('2', '{{ $schedule->id }}')" title="Remove Image">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
             </div>
-        </div>
-    @endforeach
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Schedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endforeach
 @endif
 
 {{-- ========================================== --}}
@@ -440,7 +520,7 @@
                 <h5 class="fw-bold">Register New Class Schedule</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            
+
             <div class="modal-body">
                 <div class="row g-3">
                     <div class="col-md-4 mb-3">
@@ -448,27 +528,23 @@
                         <input type="text" value="{{ old('class_name') }}" placeholder="Enter Class Name" name="class_name" class="form-control" required>
                     </div>
 
-                    {{-- Category Dropdown --}}
+                    {{-- Categories Dropdown (Multiple) --}}
                     <div class="col-md-4 mb-3">
-                        <label class="fw-bold d-block">Category <span class="text-danger">*</span></label>
-                        <select name="category_id" class="form-select select2-dropdown" style="width: 100%;" required>
-                            <option value="" selected disabled>Select Category...</option>
+                        <label class="fw-bold d-block">Categories <span class="text-danger">*</span></label>
+                        <select name="category_ids[]" multiple class="form-select select2-dropdown category-select" style="width: 100%;" required>
                             @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
+                            <option value="{{ $category->id }}" {{ in_array((string)$category->id, old('category_ids', [])) ? 'selected' : '' }}>
+                                {{ $category->name }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
 
+                    {{-- Instructors Dropdown (Options will be generated by JavaScript) --}}
                     <div class="col-md-4 mb-3">
                         <label class="fw-bold d-block">Instructor <span class="text-danger">*</span></label>
-                        <select name="instructor_ids[]" multiple class="form-select select2-dropdown" style="width: 100%;" required>
-                            @foreach($instructors as $instructor)
-                                <option value="{{ $instructor->id }}" {{ in_array($instructor->id, old('instructor_ids', [])) ? 'selected' : '' }}>
-                                    {{ $instructor->user->name }}
-                                </option>
-                            @endforeach
+                        <select name="instructor_ids[]" id="add_instructor_select" multiple class="form-select select2-dropdown instructor-select" style="width: 100%;" required data-preselected="{{ json_encode(old('instructor_ids', [])) }}">
+                            <!-- Options empty explicitly for JS populating -->
                         </select>
                     </div>
 
@@ -479,19 +555,19 @@
 
                     <div class="col-md-3 mb-3">
                         <label class="fw-bold">End Date </label>
-                        <input type="date" value="{{ old('end_date') }}" name="end_date" class="form-control" >
+                        <input type="date" value="{{ old('end_date') }}" name="end_date" class="form-control">
                     </div>
 
-                       <div class="col-md-4 mb-3">
+                    <div class="col-md-4 mb-3">
                         @php
                         $daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                         @endphp
                         <label class="fw-bold d-block">Days of Week <span class="text-danger">*</span></label>
                         <select name="days[]" multiple class="form-select select2-dropdown" style="width: 100%;" required>
                             @foreach($daysOfWeek as $day)
-                                <option value="{{ $day }}" {{ in_array($day, old('days', [])) ? 'selected' : '' }}>
-                                    {{ $day }}
-                                </option>
+                            <option value="{{ $day }}" {{ in_array($day, old('days', [])) ? 'selected' : '' }}>
+                                {{ $day }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -500,13 +576,13 @@
                         <label class="fw-bold">Time (Start - End)</label>
                         <div class="d-flex gap-2">
                             <input type="time" value="{{ old('start_time') }}" name="start_time" class="form-control" required>
-                            <input type="time" value="{{ old('end_time') }}" name="end_time" class="form-control" >
+                            <input type="time" value="{{ old('end_time') }}" name="end_time" class="form-control">
                         </div>
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="fw-bold">Capacity</label>
-                        <input type="number" value="{{ old('capacity') }}" name="capacity" class="form-control" value="15" required min="1">
+                        <input type="number" value="{{ old('capacity', 15) }}" name="capacity" class="form-control" required min="1">
                     </div>
 
                     <div class="col-md-6 mb-3">
@@ -554,57 +630,31 @@
 {{-- Plugins Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<!-- DataTables Buttons & Excel Export Libraries -->
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<!-- DataTables PDF Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-
-<!-- DataTables HTML5 buttons -->
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 
 <script>
     $(document).ready(function() {
-        if($('#basic-datatables').length) {
+        // ====================================================
+        // DataTables & Summernote
+        // ====================================================
+        if ($('#basic-datatables').length) {
             $('#basic-datatables').DataTable({
-                "order": [[ 0, "desc" ]],
+                "order": [[0, "desc"]],
                 "dom": 'Bfrtip',
-                "buttons": [
-                    {
-                        // Collection ကိုသုံးပြီး Dropdown ပုံစံပြောင်းခြင်း
-                        extend: 'collection',
-                        text: '<i class="fas fa-file-export me-1"></i> Export Data',
-                        className: 'btn btn-success text-white btn-sm mb-3',
-                        buttons: [
-                            {
-                                extend: 'excelHtml5',
-                                text: '<i class="fas fa-file-excel text-success me-2"></i> Export to Excel',
-                                exportOptions: {
-                                    columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] 
-                                }
-                            },
-                            {
-                                extend: 'csvHtml5',
-                                text: '<i class="fas fa-file-csv text-info me-2"></i> Export to CSV',
-                                exportOptions: {
-                                    columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] 
-                                }
-                            },
-                            {
-                                extend: 'pdfHtml5',
-                                text: '<i class="fas fa-file-pdf text-danger me-2"></i> Export to PDF',
-                                orientation: 'landscape',
-                                pageSize: 'A4',
-                                exportOptions: {
-                                    columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] 
-                                }
-                            }
-                        ]
-                    }
-                ]
+                "buttons": [{
+                    extend: 'collection',
+                    text: '<i class="fas fa-file-export me-1"></i> Export Data',
+                    className: 'btn btn-success text-white btn-sm mb-3',
+                    buttons: [
+                        { extend: 'excelHtml5', exportOptions: { columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] } },
+                        { extend: 'csvHtml5', exportOptions: { columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] } },
+                        { extend: 'pdfHtml5', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: [0, 2, 3, 4, 5, 6, 7, 8, 9] } }
+                    ]
+                }]
             });
         }
 
@@ -612,7 +662,7 @@
             placeholder: 'Write class details...',
             tabsize: 2,
             height: 150,
-            dialogsInBody: true, 
+            dialogsInBody: true,
             toolbar: [
                 ['style', ['style']],
                 ['font', ['bold', 'italic', 'underline', 'clear']],
@@ -623,52 +673,164 @@
             ]
         });
 
-        // Initialize Select2 for multiple dropdowns with closeOnSelect fix
-        $('.modal').on('shown.bs.modal', function () {
-            $(this).find('.select2-dropdown').each(function() {
-                // multiple attribute ပါ/မပါ စစ်ဆေးပါမည်
-                let isMultiple = $(this).prop('multiple'); 
-                
-                $(this).select2({
-                    dropdownParent: $(this).closest('.modal'),
-                    placeholder: "Search & Select...",
-                    allowClear: true,
-                    // Multiple ဖြစ်ရင် Dropdown ပြန်မပိတ်ပါ (ဆက်တိုက်ရွေးနိုင်ရန်)
-                    closeOnSelect: !isMultiple 
+        // ====================================================
+        // Dynamic Instructor Dropdown Based on Category Setup
+        // ====================================================
+
+        @php
+            $mappedInstructors = $instructors->map(function($inst) {
+                return [
+                    'id' => (string) $inst->id,
+                    'name' => $inst->user->name ?? 'Unknown',
+                    'category_ids' => $inst->categoryFees 
+                        ? $inst->categoryFees->pluck('category_id')->map(function($id) { return (string) $id; })->toArray() 
+                        : []
+                ];
+            })->values();
+        @endphp
+
+        // Prepare Instructor Data
+        const instructorsData = @json($mappedInstructors);
+
+        // Update Instructor Dropdown logic
+        function updateInstructorDropdown(categorySelect) {
+            let modal = categorySelect.closest('.modal');
+            let instructorSelect = modal.find('.instructor-select');
+            
+            if (instructorSelect.length === 0) return;
+
+            // Fetch Multiple selected category IDs
+            let categoryIds = categorySelect.val() || [];
+            if (!Array.isArray(categoryIds)) {
+                categoryIds = [categoryIds];
+            }
+            
+            // 1. Get preselected IDs from attribute (for Edit Mode / Validation Fails)
+            let preselectedAttr = instructorSelect.attr('data-preselected');
+            let selectedIds = [];
+
+            if (preselectedAttr) {
+                try {
+                    let parsed = JSON.parse(preselectedAttr);
+                    if (Array.isArray(parsed)) {
+                        selectedIds = parsed.map(String);
+                    } else if (parsed) {
+                        selectedIds = [String(parsed)];
+                    }
+                } catch(e) { console.error('Error parsing preselected data', e); }
+            } else {
+                // 2. If no preselected attribute, get user's current selection
+                let currentVal = instructorSelect.val();
+                if (currentVal) {
+                    selectedIds = Array.isArray(currentVal) ? currentVal.map(String) : [String(currentVal)];
+                }
+            }
+
+            // 3. Clear existing options in Select
+            instructorSelect.empty();
+
+            // 4. Filter Instructors strictly by Category Fees (Rates & Bonuses)
+            if (categoryIds.length > 0) {
+                let validInstructors = instructorsData.filter(inst => {
+                    // Check if Instructor has AT LEAST ONE of the selected categories in their rates
+                    return categoryIds.some(id => inst.category_ids.includes(String(id)));
                 });
+
+                validInstructors.forEach(inst => {
+                    let isSelected = selectedIds.includes(String(inst.id));
+                    let option = new Option(inst.name, inst.id, isSelected, isSelected);
+                    instructorSelect.append(option);
+                });
+            }
+
+            // 5. Update Select2 UI if it is already initialized
+            if (instructorSelect.hasClass("select2-hidden-accessible")) {
+                instructorSelect.trigger('change.select2');
+            }
+        }
+
+        // ====================================================
+        // Modal Event Listeners
+        // ====================================================
+
+        // Trigger BEFORE modal is visible to populate dropdowns properly
+        $('.modal').on('show.bs.modal', function() {
+            let modal = $(this);
+            let catSelect = modal.find('.category-select');
+            if (catSelect.length > 0) {
+                updateInstructorDropdown(catSelect);
+            }
+        });
+
+        // Initialize Select2 AFTER modal is visible for proper width rendering
+        $('.modal').on('shown.bs.modal', function() {
+            let modal = $(this);
+            modal.find('.select2-dropdown').each(function() {
+                if (!$(this).hasClass("select2-hidden-accessible")) {
+                    let isMultiple = $(this).prop('multiple');
+                    $(this).select2({
+                        dropdownParent: modal,
+                        placeholder: "Search & Select...",
+                        allowClear: true,
+                        closeOnSelect: !isMultiple
+                    });
+                }
             });
+        });
+
+        // ====================================================
+        // Category Change Event
+        // ====================================================
+        $(document).on('change', '.category-select', function() {
+            // Remove the preselected lock when user manually changes category
+            let modal = $(this).closest('.modal');
+            let instructorSelect = modal.find('.instructor-select');
+            instructorSelect.removeAttr('data-preselected');
+            
+            updateInstructorDropdown($(this));
         });
     });
 
-    // Live Image Preview
+    // ====================================================
+    // Image Preview scripts
+    // ====================================================
     function previewNewImage(input, previewId) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
             reader.onload = function(e) {
                 document.getElementById(previewId).src = e.target.result;
                 let addContainer = document.getElementById(previewId.replace('add_preview', 'add_preview_container'));
-                if(addContainer) addContainer.style.display = 'inline-block';
+                if (addContainer) {
+                    addContainer.style.display = 'inline-block';
+                }
                 let editContainer = document.getElementById(previewId.replace('edit_preview', 'container_image'));
-                if(editContainer) editContainer.style.setProperty('display', 'inline-block', 'important');
-                if(previewId.includes('edit_preview')) {
-                    let parts = previewId.split('_'); 
+                if (editContainer) {
+                    editContainer.style.setProperty('display', 'inline-block', 'important');
+                }
+                if (previewId.includes('edit_preview')) {
+                    let parts = previewId.split('_');
                     let hiddenInput = document.getElementById('remove_image_' + parts[2] + '_' + parts[3]);
-                    if(hiddenInput) hiddenInput.value = '0';
+                    if (hiddenInput) hiddenInput.value = '0';
                 }
             }
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // Remove Image UI
-    window.removeExistingImage = function(imageNum, scheduleId) {
-        if(confirm("Are you sure you want to remove this image?")) {
+    function removeExistingImage(imageNum, scheduleId) {
+        if (confirm("Are you sure you want to remove this image?")) {
             let hiddenInput = document.getElementById('remove_image_' + imageNum + '_' + scheduleId);
-            if(hiddenInput) hiddenInput.value = '1';
+            if (hiddenInput) {
+                hiddenInput.value = '1';
+            }
             let previewContainer = document.getElementById('container_image_' + imageNum + '_' + scheduleId);
-            if(previewContainer) previewContainer.style.setProperty('display', 'none', 'important');
+            if (previewContainer) {
+                previewContainer.style.setProperty('display', 'none', 'important');
+            }
             let fileInput = document.getElementById('file_input_' + imageNum + '_' + scheduleId);
-            if(fileInput) fileInput.value = '';
+            if (fileInput) {
+                fileInput.value = '';
+            }
         }
-    };
+    }
 </script>

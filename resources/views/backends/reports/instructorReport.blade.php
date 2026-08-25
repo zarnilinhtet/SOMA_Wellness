@@ -15,12 +15,15 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle" id="basic-datatables">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
                                 <th>No.</th>
                                 <th>Instructor Name</th>
+                                <th>Type</th>
+                                <th>Full Time Base Salary</th>
+                                <th>Class Earnings (Bonus / % Fee)</th>
                                 <th>Total Classes</th>
-                                <th>Total Fee</th>
+                                <th>Grand Total (Total Salary)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -33,11 +36,29 @@
                                                 data-id="{{ $instructor['id'] ?? '' }}" 
                                                 data-name="{{ $instructor['name'] ?? 'Unknown' }}"
                                                 style="text-decoration: none; cursor: pointer;">
-                                                {{ $instructor['name'] ?? 'Unknown' }}
+                                                <i class="fas fa-user-circle me-1"></i> {{ $instructor['name'] ?? 'Unknown' }}
                                             </a>
                                         </td>
-                                        <td>{{ $instructor['total_classes'] ?? 0 }}</td>
-                                        <td>{{ number_format((float)($instructor['total_fee'] ?? 0)) }}</td>
+                                        <td>
+                                            <span class="badge {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'bg-primary' : 'bg-warning text-dark' }}">
+                                                <i class="fas {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'fa-user-tie' : 'fa-user-clock' }} me-1"></i>
+                                                {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'Full Time' : 'Part Time' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if(($instructor['type'] ?? '') == 'full_time')
+                                                <span class="fw-bold text-muted">{{ number_format((float)($instructor['base_salary'] ?? 0)) }} MMK</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            {{ number_format((float)($instructor['class_earnings'] ?? 0)) }} MMK
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ $instructor['total_classes'] ?? 0 }}</span></td>
+                                        <td class="fw-bold text-success fs-6">
+                                            {{ number_format((float)($instructor['grand_total'] ?? 0)) }} MMK
+                                        </td>
                                     </tr>
                                 @endif
                             @endforeach
@@ -49,16 +70,14 @@
     </div>
 </div>
 
-<div class="modal fade" id="instructorPackagesModal" tabindex="-1" aria-labelledby="instructorPackagesModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="instructorPackagesModal" tabindex="-1" aria-labelledby="instructorPackagesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="instructorPackagesModalLabel">
-                    Summary For <span id="modalinstructorName"></span>
+                    Class Summary For <span id="modalinstructorName"></span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="max-height: 550px; overflow-y: auto;">
                 <div id="loadingSpinner" class="text-center py-4">
@@ -79,40 +98,13 @@
 @include('master.footer')
 
 <style>
-    .show-instructor-details:hover {
-        opacity: 0.8;
-        text-decoration: underline !important;
-    }
-
-    .modal-body::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .modal-body::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-
-    .modal-body::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-    }
-
-    .modal-body::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-
-    .btn-excel {
-        background-color: #107c41 !important;
-        color: white !important;
-        border: none;
-        border-radius: 5px;
-        padding: 5px 15px;
-        font-weight: 500;
-    }
-    .btn-excel:hover {
-        background-color: #0b5e31 !important;
-    }
+    .show-instructor-details:hover { opacity: 0.8; text-decoration: underline !important; }
+    .modal-body::-webkit-scrollbar { width: 6px; }
+    .modal-body::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .modal-body::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    .modal-body::-webkit-scrollbar-thumb:hover { background: #555; }
+    .btn-excel { background-color: #107c41 !important; color: white !important; border: none; border-radius: 5px; padding: 5px 15px; font-weight: 500; }
+    .btn-excel:hover { background-color: #0b5e31 !important; }
 </style>
 
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -163,8 +155,7 @@
                                         <th>End Date</th>
                                         <th>Time</th>
                                         <th>Total Clients</th>
-                                        <th>Target Bonus</th>
-                                        <th>Total Fee (Incl. Bonus)</th>
+                                        <th>Class Earnings (Bonus/Fee)</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
@@ -177,9 +168,8 @@
                                 <td>${res.start_date || '-'}</td>
                                 <td>${res.end_date || '-'}</td>
                                 <td>${res.time || '-'}</td>
-                                <td>${res.total_clients || '0'}</td>
-                                <td><span class="badge bg-success">${res.bonus_fee ? Number(res.bonus_fee).toLocaleString() : '0'}</span></td>
-                                <td class="fw-bold text-primary">${res.total_fee ? Number(res.total_fee).toLocaleString() : '0'}</td>
+                                <td><span class="badge bg-secondary">${res.total_clients || '0'}</span></td>
+                                <td class="fw-bold text-primary">${res.total_fee ? Number(res.total_fee).toLocaleString() : '0'} MMK</td>
                             </tr>`;
                         });
 

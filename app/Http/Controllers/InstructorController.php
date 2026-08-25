@@ -27,53 +27,21 @@ class InstructorController extends Controller
             'instructor_id' => [
                 'required',
                 'integer',
-                // ပြဿနာမဖြစ်စေရန် deleted_at null ဖြစ်မှသာ unique စစ်မည်
                 Rule::unique('instructors', 'instructor_id')->whereNull('deleted_at')
             ],
-            'specialty' => 'nullable|string|max:255',
+            'instructor_type' => 'required|in:full_time,part_time',
+            'specialty' => 'nullable|array',
             'category_fees' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($request) {
             $instructor = Instructor::create([
                 'instructor_id' => $request->instructor_id,
-                'specialty' => $request->specialty,
+                'instructor_type' => $request->instructor_type,
+                'specialty' => $request->has('specialty') ? json_encode($request->specialty) : null,
             ]);
 
-            if ($request->has('category_fees')) {
-                foreach ($request->category_fees as $categoryId => $data) {
-                    // Checkbox ရွေးထားပြီး Fee Value အလွတ်မဖြစ်မှသာ သိမ်းမည်
-                    if (isset($data['selected']) && $data['selected'] == '1' && isset($data['fee_value']) && $data['fee_value'] !== null && $data['fee_value'] !== '') {
-
-                        $bonuses = [];
-                        if (isset($data['bonuses']) && is_array($data['bonuses'])) {
-                            foreach ($data['bonuses'] as $bonus) {
-                                // 0 ကို လက်ခံနိုင်ရန် !empty အစား isset ဖြင့် စစ်ထားပါသည်
-                                if (isset($bonus['threshold']) && $bonus['threshold'] !== '' && isset($bonus['amount']) && $bonus['amount'] !== '') {
-                                    $bonuses[] = [
-                                        'threshold' => (int) $bonus['threshold'],
-                                        'amount' => (float) $bonus['amount'],
-                                    ];
-                                }
-                            }
-                            // အကြီးဆုံး Threshold ကနေ စီရန်
-                            if (count($bonuses) > 0) {
-                                usort($bonuses, function ($a, $b) {
-                                    return $b['threshold'] <=> $a['threshold'];
-                                });
-                            }
-                        }
-
-                        InstructorCategoryFee::create([
-                            'instructor_id' => $instructor->id,
-                            'category_id' => $categoryId,
-                            'fee_type' => $data['fee_type'],
-                            'fee_value' => $data['fee_value'],
-                            'bonuses' => (count($bonuses) > 0) ? $bonuses : null,
-                        ]);
-                    }
-                }
-            }
+            $this->saveCategoryFees($instructor->id, $request->category_fees);
         });
 
         return redirect()->back()->with('success', 'Instructor registered successfully.');
@@ -87,52 +55,20 @@ class InstructorController extends Controller
                 'integer',
                 Rule::unique('instructors', 'instructor_id')->ignore($instructor->id)->whereNull('deleted_at'),
             ],
-            'specialty' => 'nullable|string|max:255',
+            'instructor_type' => 'required|in:full_time,part_time',
+            'specialty' => 'nullable|array',
             'category_fees' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($request, $instructor) {
             $instructor->update([
                 'instructor_id' => $request->instructor_id,
-                'specialty' => $request->specialty,
+                'instructor_type' => $request->instructor_type,
+                'specialty' => $request->has('specialty') ? json_encode($request->specialty) : null,
             ]);
 
-            // အဟောင်းဖျက် အသစ်ပြန်ထည့်မည်
             InstructorCategoryFee::where('instructor_id', $instructor->id)->delete();
-
-            if ($request->has('category_fees')) {
-                foreach ($request->category_fees as $categoryId => $data) {
-                    // Checkbox ရွေးထားပြီး Fee Value အလွတ်မဖြစ်မှသာ သိမ်းမည်
-                    if (isset($data['selected']) && $data['selected'] == '1' && isset($data['fee_value']) && $data['fee_value'] !== null && $data['fee_value'] !== '') {
-
-                        $bonuses = [];
-                        if (isset($data['bonuses']) && is_array($data['bonuses'])) {
-                            foreach ($data['bonuses'] as $bonus) {
-                                if (isset($bonus['threshold']) && $bonus['threshold'] !== '' && isset($bonus['amount']) && $bonus['amount'] !== '') {
-                                    $bonuses[] = [
-                                        'threshold' => (int) $bonus['threshold'],
-                                        'amount' => (float) $bonus['amount'],
-                                    ];
-                                }
-                            }
-                            // အကြီးဆုံး Threshold ကနေ စီရန်
-                            if (count($bonuses) > 0) {
-                                usort($bonuses, function ($a, $b) {
-                                    return $b['threshold'] <=> $a['threshold'];
-                                });
-                            }
-                        }
-
-                        InstructorCategoryFee::create([
-                            'instructor_id' => $instructor->id,
-                            'category_id' => $categoryId,
-                            'fee_type' => $data['fee_type'],
-                            'fee_value' => $data['fee_value'],
-                            'bonuses' => (count($bonuses) > 0) ? $bonuses : null,
-                        ]);
-                    }
-                }
-            }
+            $this->saveCategoryFees($instructor->id, $request->category_fees);
         });
 
         return redirect()->back()->with('success', 'Instructor configurations updated successfully.');
@@ -141,14 +77,50 @@ class InstructorController extends Controller
     public function destroy(Instructor $instructor)
     {
         DB::transaction(function () use ($instructor) {
-            // Delete related Category Fees
             InstructorCategoryFee::where('instructor_id', $instructor->id)->delete();
-
-            // Force Delete လုပ်ပေးမှသာ ထို User ကို Instructor အဖြစ်ပြန်လည် Register လုပ်နိုင်ပါမည်
-            // Unique constraint error ကိုရှောင်ရှားရန်ဖြစ်သည်
             $instructor->forceDelete();
         });
 
         return redirect()->back()->with('success', 'Instructor deleted successfully.');
+    }
+
+    private function saveCategoryFees($instructorId, $categoryFees)
+    {
+        if (!$categoryFees) return;
+
+        foreach ($categoryFees as $categoryId => $data) {
+            if (isset($data['selected']) && $data['selected'] == '1') {
+                $feeType = $data['fee_type'] ?? 'full_time_fixed';
+
+                // Tiered type ဆိုလျှင် base value မလိုပါ (0 ထားမည်)
+                $feeValue = ($feeType === 'part_time_tiered') ? 0 : ($data['fee_value'] ?? 0);
+
+                $bonuses = [];
+                if (isset($data['bonuses']) && is_array($data['bonuses'])) {
+                    foreach ($data['bonuses'] as $bonus) {
+                        if (isset($bonus['threshold']) && $bonus['threshold'] !== '' && isset($bonus['amount']) && $bonus['amount'] !== '') {
+                            $bonuses[] = [
+                                'threshold' => (int) $bonus['threshold'],
+                                'amount' => (float) $bonus['amount'],
+                            ];
+                        }
+                    }
+                    if (count($bonuses) > 0) {
+                        // ကျောင်းသားအရေအတွက်အများဆုံး (Threshold အကြီးဆုံး) ကနေ စီထားရန်
+                        usort($bonuses, function ($a, $b) {
+                            return $b['threshold'] <=> $a['threshold'];
+                        });
+                    }
+                }
+
+                InstructorCategoryFee::create([
+                    'instructor_id' => $instructorId,
+                    'category_id' => $categoryId,
+                    'fee_type' => $feeType,
+                    'fee_value' => $feeValue,
+                    'bonuses' => (count($bonuses) > 0) ? $bonuses : null,
+                ]);
+            }
+        }
     }
 }

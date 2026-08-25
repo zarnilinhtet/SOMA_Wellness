@@ -239,7 +239,7 @@
                                             <a href="{{ route('bookings.index') }}">
 
                                                 <span class="sub-item">
-                                                    Cancel
+                                                    Class Booking
                                                 </span>
 
                                             </a>
@@ -580,7 +580,7 @@
                                     </li>
 
 
-                                    <li>
+                                    {{-- <li>
 
                                         <a href="{{ route('bookings.index') }}">
 
@@ -590,9 +590,9 @@
 
                                         </a>
 
-                                    </li>
+                                    </li> --}}
 
-
+{{-- 
                                     <li>
 
                                         <a href="{{ route('waitlist.index') }}">
@@ -603,7 +603,7 @@
 
                                         </a>
 
-                                    </li>
+                                    </li> --}}
 
 
                                 </ul>

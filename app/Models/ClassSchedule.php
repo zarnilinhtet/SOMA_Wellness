@@ -13,6 +13,7 @@ class ClassSchedule extends Model
         'instructor_ids',
         'category_id',
         'class_name',
+        'category_ids',
         'description',
         'image_1',
         'image_2',

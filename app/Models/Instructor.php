@@ -13,6 +13,7 @@ class Instructor extends Model
     protected $fillable = [
         'instructor_id',
         'specialty',
+        'instructor_type',
         'total_earnings',
     ];
 

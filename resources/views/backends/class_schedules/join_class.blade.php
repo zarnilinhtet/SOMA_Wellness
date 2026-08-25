@@ -91,22 +91,33 @@
                                     $endTime = $class->end_time ? \Carbon\Carbon::parse($class->end_time)->format('h:i A') : '--';
                                     
                                     $computedStatus = (strtolower($class->status) === 'ongoing' || strtolower($class->status) === 'active') ? 'Open' : ucfirst($class->status);
+
+                                    // Correctly Extract Instructors from JSON array
+                                    $instIds = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
+                                    $instIds = is_array($instIds) ? $instIds : [];
+                                    $classInstructors = \App\Models\Instructor::with('user')->whereIn('id', $instIds)->get();
+                                    $instructorNames = $classInstructors->pluck('user.name')->filter()->implode(', ') ?: 'N/A';
+
+                                    // Correctly Extract Days
+                                    $daysArray = is_string($class->days) ? json_decode($class->days, true) : ($class->days ?? []);
+                                    $daysForJs = is_array($daysArray) ? implode(' ', $daysArray) : '';
+                                    $daysForDisplay = is_array($daysArray) ? implode(', ', $daysArray) : '';
                                 @endphp
 
                                 <option value="{{ $class->id }}" 
                                         data-name="{{ $class->class_name ?? $class->name }}"
                                         data-category="{{ $class->category->name ?? 'N/A' }}"
-                                        data-instructor="{{ collect($class->instructor)->pluck('user.name')->filter()->implode(', ') ?: ($class->instructor_code ?? 'CC') }}"
+                                        data-instructor="{{ $instructorNames }}"
                                         data-start-date="{{ $formattedDate }}"
                                         data-raw-start-date="{{ $rawStartDate }}"
                                         data-raw-end-date="{{ $rawEndDate }}"
                                         data-end-date="{{ \Carbon\Carbon::parse($class->end_date ?? now())->format('d M Y') }}"
                                         data-time="{{ $startTime }} - {{ $endTime }}"
-                                        data-days="{{ is_array($class->days) ? implode(' ', $class->days) : ($class->days ?? '') }}"
+                                        data-days="{{ $daysForJs }}"
                                         data-capacity="{{ $class->capacity ?? 0 }}"
                                         data-status="{{ $computedStatus }}"
                                         {{ old('class_id') == $class->id ? 'selected' : '' }}>
-                                    {{ $class->class_name ?? $class->name }} | {{ $formattedDate }} | {{ $startTime }}
+                                    {{ $class->class_name ?? $class->name }} | Inst: {{ $instructorNames }} | {{ $daysForDisplay }} | {{ $formattedDate }} | {{ $startTime }}
                                 </option>
                             @endforeach
                         </select>
@@ -175,7 +186,6 @@
     </div>
 </div>
 
-<!-- Scripts remain identical to the previous code -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -293,6 +303,12 @@
         $('#select_all_dates').on('click', function() {
             if(flatpickrInstance && validDatesArray.length > 0) {
                 flatpickrInstance.setDate(validDatesArray, true);
+                
+                // Manually trigger the validation check since setDate won't fire onChange automatically 
+                const classId = $('#class_select').val();
+                if (classId) {
+                    checkEligibility(classId, userId);
+                }
             }
         });
 

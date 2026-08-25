@@ -375,7 +375,7 @@
                                                     @endif
                                                     
                                                     @if($isInstructorCheckedInToday && !$isClassOver && $targetDateStr === \Carbon\Carbon::today('Asia/Yangon')->format('Y-m-d'))
-                                                        <span class="btn btn-soma-teaching btn-sm px-3 py-1 w-100 mt-1">Teaching...</span>
+                                                        <span class="btn btn-soma-teaching btn-sm px-3 py-1 w-100 mt-1">On Going</span>
                                                     @endif
                                                 @endif
                                             @endauth

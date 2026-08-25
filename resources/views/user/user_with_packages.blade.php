@@ -161,7 +161,7 @@
                                                 <li><a class="dropdown-item text-primary" href="{{ route('user.package.details', $user->id) }}">Full Details</a></li>
                                                 
                                                 <!-- Attendance History Button -->
-                                                <li>
+                                                {{-- <li>
                                                     <button class="dropdown-item text-info view-attendance" 
                                                             data-id="{{ $user->id }}" 
                                                             data-name="{{ $user->name }}"
@@ -171,7 +171,7 @@
                                                             data-bs-toggle="modal" data-bs-target="#attendanceHistoryModal">
                                                         <i class="fas fa-history me-1"></i> Class History
                                                     </button>
-                                                </li>
+                                                </li> --}}
 
                                                 @if(!$user->hasRole('Admin') && auth()->user()->hasPermission('user_register'))
                                                     <li><hr class="dropdown-divider"></li>
