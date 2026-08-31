@@ -91,9 +91,7 @@ class InstructorController extends Controller
         foreach ($categoryFees as $categoryId => $data) {
             if (isset($data['selected']) && $data['selected'] == '1') {
                 $feeType = $data['fee_type'] ?? 'full_time_fixed';
-
-                // Tiered type ဆိုလျှင် base value မလိုပါ (0 ထားမည်)
-                $feeValue = ($feeType === 'part_time_tiered') ? 0 : ($data['fee_value'] ?? 0);
+                $feeValue = $data['fee_value'] ?? 0;
 
                 $bonuses = [];
                 if (isset($data['bonuses']) && is_array($data['bonuses'])) {
@@ -106,9 +104,9 @@ class InstructorController extends Controller
                         }
                     }
                     if (count($bonuses) > 0) {
-                        // ကျောင်းသားအရေအတွက်အများဆုံး (Threshold အကြီးဆုံး) ကနေ စီထားရန်
+                        // Ensure chronological order
                         usort($bonuses, function ($a, $b) {
-                            return $b['threshold'] <=> $a['threshold'];
+                            return $a['threshold'] <=> $b['threshold'];
                         });
                     }
                 }

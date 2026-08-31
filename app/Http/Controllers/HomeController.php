@@ -356,9 +356,6 @@ class HomeController extends Controller
         return view('frontend.payment', compact('payments', 'package', 'redeem', 'onboarding', 'discountPackage'));
     }
 
-    // ==============================================
-    // အောက်ပါ paymentSubmit Function တွင် ပြင်ဆင်ထားပါသည်
-    // ==============================================
     public function paymentSubmit(Request $request)
     {
         $validated = $request->validate([
@@ -376,21 +373,31 @@ class HomeController extends Controller
 
         $packageModel = Package::findOrFail($request->package);
 
-        // --- Image ဓာတ်ပုံကို File System ထဲသို့ သိမ်းဆည်းခြင်း ---
         $screenshotPath = null;
         if ($request->hasFile('screenshot')) {
             $image = $request->file('screenshot');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-
-            // public/uploads/purchases ဆိုတဲ့ ဖိုဒါထဲကို ရွှေ့ပါမယ် (Folder မရှိရင် အလိုလို ဆောက်သွားပါမယ်)
             $image->move(public_path('uploads/purchases'), $imageName);
-
-            // Database မှာသိမ်းဖို့ Path
             $screenshotPath = 'uploads/purchases/' . $imageName;
         }
-        // ----------------------------------------------------
 
-        DB::transaction(function () use ($request, $packageModel, $screenshotPath) {
+        $userId = $request->registered_id;
+        $latestPurchase = Purchase::where('registered_id', $userId)
+            ->whereHas('package', function ($q) use ($packageModel) {
+                $q->where('type', $packageModel->type);
+            })
+            ->orderBy('fix_expires_at', 'desc')
+            ->first();
+
+        $baseDate = now();
+        if ($latestPurchase && $latestPurchase->fix_expires_at) {
+            $latestFixDate = Carbon::parse($latestPurchase->fix_expires_at);
+            if ($latestFixDate->isFuture() && $latestPurchase->class_remaining > 0) {
+                $baseDate = $latestFixDate;
+            }
+        }
+
+        DB::transaction(function () use ($request, $packageModel, $screenshotPath, $baseDate) {
             Purchase::create([
                 'registered_id' => $request->registered_id,
                 'selected_packages_id' => $request->package,
@@ -403,9 +410,9 @@ class HomeController extends Controller
                 'user_discount' => $request->userDiscount ?? 0,
                 'coin_used' => $request->coin_used ?? 0,
                 'class_remaining' => $packageModel->class_count,
-                'expires_at' => now()->addDays($packageModel->duration),
-                'fix_expires_at' => now()->addDays($packageModel->fix_duration),
-                'screenshot' => $screenshotPath, // <--- ဓာတ်ပုံလမ်းကြောင်းကို ဤနေရာတွင် Database သို့ ထည့်ပါသည်
+                'expires_at' => $baseDate->copy()->addDays($packageModel->duration),
+                'fix_expires_at' => $baseDate->copy()->addDays($packageModel->fix_duration),
+                'screenshot' => $screenshotPath,
             ]);
 
             $coinsRequested = (float) $request->coin_used;
@@ -456,65 +463,82 @@ class HomeController extends Controller
 
     public function history(Request $request)
     {
-        $search = $request->input('search');
+        $userId = auth()->id();
         $tab = $request->input('tab', 'rates');
 
+        // 1. Get All Purchases (DataTables handles Pagination on Frontend)
         $purchases = Purchase::with('package.category')
-            ->where('registered_id', auth()->id())
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($subQuery) use ($search) {
-                    $subQuery->where('transaction_no', 'like', "%{$search}%")
-                        ->orWhere('payment_method', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('account_name', 'like', "%{$search}%")
-                        ->orWhere('amount', 'like', "%{$search}%")
-                        ->orWhereHas('package', function ($packageQuery) use ($search) {
-                            $packageQuery->where('name', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->orderBy('created_at', 'asc')
-            ->paginate(10);
-
-        $classes = Booking::with(['class', 'class.category'])
-            ->where('registered_id', auth()->id())
-            ->when($search, function ($q) use ($search) {
-                $instructorIds = Instructor::whereHas('user', function ($u) use ($search) {
-                    $u->where('name', 'like', "%{$search}%");
-                })->pluck('id')->map(fn($id) => (string) $id)->toArray();
-
-                $q->where(function ($sub) use ($search, $instructorIds) {
-                    $sub->where('status', 'like', "%{$search}%")
-                        ->orWhereHas('class', function ($c) use ($search, $instructorIds) {
-                            $c->where(function ($classQuery) use ($search, $instructorIds) {
-                                $classQuery->where('class_name', 'like', "%{$search}%");
-                                if (!empty($instructorIds)) {
-                                    $classQuery->orWhere(function ($jsonQuery) use ($instructorIds) {
-                                        foreach ($instructorIds as $id) {
-                                            $jsonQuery->orWhereJsonContains('instructor_ids', $id);
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                });
-            })
+            ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
-            ->paginate(10)->fragment('classResults');
+            ->get();
 
-        $classes->getCollection()->each(function ($booking) {
-            if ($booking->class) {
-                $ids = is_string($booking->class->instructor_ids) ? json_decode($booking->class->instructor_ids, true) : ($booking->class->instructor_ids ?? []);
-                if (!is_array($ids)) $ids = [$ids];
+        // Check Queued / Active logic
+        $realActiveIds = [];
+        $allValid = Purchase::with('package')
+            ->where('registered_id', $userId)
+            ->where('class_remaining', '>', 0)
+            ->where('pay_status', 'confirmed')
+            ->where('fix_expires_at', '>=', now())
+            ->get();
 
-                $booking->class->instructors = Instructor::with('user')
-                    ->whereIn('id', $ids)
-                    ->get();
+        $grouped = $allValid->groupBy(function ($p) {
+            return $p->package ? $p->package->type : 'none';
+        });
+
+        foreach ($grouped as $type => $packs) {
+            $active = $packs->sortBy('created_at')->first();
+            if ($active) $realActiveIds[] = $active->id;
+        }
+
+        $purchases->each(function ($purchase) use ($realActiveIds) {
+            $purchase->is_queued = false;
+            $purchase->projected_start = null;
+            $purchase->is_active_now = in_array($purchase->id, $realActiveIds);
+            $purchase->is_finished = false;
+
+            $packageModel = $purchase->package;
+            $expiryDate = $purchase->expires_at ? Carbon::parse($purchase->expires_at) : null;
+            $fixExpiryDate = $purchase->fix_expires_at ? Carbon::parse($purchase->fix_expires_at) : null;
+
+            if (strtolower($purchase->status ?? '') === 'finished') {
+                $purchase->is_finished = true;
+            } elseif (strtolower($purchase->pay_status) === 'confirmed') {
+                if ($purchase->class_remaining <= 0 && !$purchase->is_queued && !$purchase->is_active_now) {
+                    $purchase->is_finished = true;
+                }
+                if ($expiryDate && $expiryDate->isPast()) $purchase->is_finished = true;
+                if ($fixExpiryDate && $fixExpiryDate->isPast()) $purchase->is_finished = true;
+            }
+
+            if ($packageModel && $purchase->class_remaining > 0 && !$purchase->is_active_now && strtolower($purchase->pay_status) === 'confirmed' && !$purchase->is_finished) {
+                $purchase->is_queued = true;
+                if ($purchase->fix_expires_at) {
+                    $purchase->projected_start = Carbon::parse($purchase->fix_expires_at)->subDays($packageModel->fix_duration);
+                }
             }
         });
 
-        if ($request->ajax()) {
-            return view('frontend.history_list', compact('purchases', 'classes', 'tab'))->render();
+        // 2. Get All Classes (Bookings) (DataTables handles Pagination on Frontend)
+        $classes = Booking::with(['classSchedule.category'])
+            ->where('registered_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        foreach ($classes as $booking) {
+            $class = $booking->classSchedule;
+            if ($class && !empty($class->instructor_ids)) {
+                $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : $class->instructor_ids;
+                if (!is_array($ids)) $ids = [$ids];
+
+                $class->instructorList = Instructor::with('user')
+                    ->whereIn('id', $ids)
+                    ->get();
+            } else {
+                if ($class) {
+                    $class->instructorList = collect();
+                }
+            }
+            $booking->assigned_class = $class;
         }
 
         return view('frontend.history', compact('purchases', 'classes', 'tab'));
@@ -569,7 +593,7 @@ class HomeController extends Controller
                     ->where('fix_expires_at', '>=', now())
                     ->orWhereRaw('class_remaining < (SELECT class_count FROM packages WHERE id = purchases.selected_packages_id)');
             })
-            ->orderBy('created_at', 'asc')
+            ->orderBy('created_at', 'asc') // Queued ဖြစ်နေသည်များကို အစဉ်လိုက်ရွေးချယ်ရန်
             ->first();
 
         if (!$activePurchase) {
@@ -612,6 +636,14 @@ class HomeController extends Controller
 
         $booking->status = 'confirmed';
         $booking->save();
+
+        $packageModel = Package::find($activePurchase->selected_packages_id);
+        if ($packageModel && $activePurchase->class_remaining == $packageModel->class_count) {
+            $activePurchase->expires_at = now()->addDays($packageModel->duration);
+            $activePurchase->fix_expires_at = now()->addDays($packageModel->fix_duration);
+            $activePurchase->save();
+        }
+
         $activePurchase->decrement('class_remaining');
 
         return redirect()->back()
@@ -703,5 +735,66 @@ class HomeController extends Controller
         }
 
         return view('frontend.class_history', compact('bookings'));
+    }
+    public function myPackageHistory(Request $request)
+    {
+        $userId = auth()->id();
+
+        // Get All Purchases for the user
+        $purchases = Purchase::with('package.category')
+            ->where('registered_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Check Queued / Active logic
+        $realActiveIds = [];
+        $allValid = Purchase::with('package')
+            ->where('registered_id', $userId)
+            ->where('class_remaining', '>', 0)
+            ->where('pay_status', 'confirmed')
+            ->where('fix_expires_at', '>=', now())
+            ->get();
+
+        $grouped = $allValid->groupBy(function ($p) {
+            return $p->package ? $p->package->type : 'none';
+        });
+
+        foreach ($grouped as $type => $packs) {
+            $active = $packs->sortBy('created_at')->first();
+            if ($active) $realActiveIds[] = $active->id;
+        }
+
+        $purchases->each(function ($purchase) use ($realActiveIds) {
+            $purchase->is_queued = false;
+            $purchase->projected_start = null;
+            $purchase->is_active_now = in_array($purchase->id, $realActiveIds);
+            $purchase->is_finished = false;
+
+            $packageModel = $purchase->package;
+            $expiryDate = $purchase->expires_at ? Carbon::parse($purchase->expires_at) : null;
+            $fixExpiryDate = $purchase->fix_expires_at ? Carbon::parse($purchase->fix_expires_at) : null;
+
+            // Determine if Finished
+            if (strtolower($purchase->status ?? '') === 'finished') {
+                $purchase->is_finished = true;
+            } elseif (strtolower($purchase->pay_status) === 'confirmed') {
+                if ($purchase->class_remaining <= 0 && !$purchase->is_queued && !$purchase->is_active_now) {
+                    $purchase->is_finished = true;
+                }
+                if ($expiryDate && $expiryDate->isPast()) $purchase->is_finished = true;
+                if ($fixExpiryDate && $fixExpiryDate->isPast()) $purchase->is_finished = true;
+            }
+
+            // Determine if Queued
+            if ($packageModel && $purchase->class_remaining > 0 && !$purchase->is_active_now && strtolower($purchase->pay_status) === 'confirmed' && !$purchase->is_finished) {
+                $purchase->is_queued = true;
+                if ($purchase->fix_expires_at) {
+                    $purchase->projected_start = Carbon::parse($purchase->fix_expires_at)->subDays($packageModel->fix_duration);
+                }
+            }
+        });
+
+        // View အသစ်သို့ return ပြန်ပါမည်
+        return view('frontend.package_history', compact('purchases'));
     }
 }

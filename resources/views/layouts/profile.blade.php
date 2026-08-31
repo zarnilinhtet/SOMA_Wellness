@@ -342,7 +342,7 @@
             <div class="profile-menu">
                 <a href="{{ url('my-class-history') }}">
                     <span class="menu-link-content">
-                        <i class="fa-regular fa-calendar"></i>
+                       <i class="fa-solid fa-person-chalkboard"></i>
                        Class History
                     </span>
                     <svg class="chevron" viewBox="0 0 24 24">
@@ -350,7 +350,17 @@
                     </svg>
                 </a>
             </div>
-
+   <div class="profile-menu">
+                <a href="{{ url('my-package-history') }}">
+                    <span class="menu-link-content">
+                        <i class="fa-regular fa-calendar"></i>
+                       Package History
+                    </span>
+                    <svg class="chevron" viewBox="0 0 24 24">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </a>
+            </div>
             <!-- System Navigation Paths -->
             <div class="profile-menu">
                 <a href="{{ route('history.page') }}">

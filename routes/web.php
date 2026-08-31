@@ -102,7 +102,10 @@ Route::middleware('auth')->group(function () {
         'myClassHistory'
     ])->name('my.class.history');
 
-
+    Route::get('/my-package-history', [
+        HomeController::class,
+        'myPackageHistory'
+    ])->name('my.package.history');
     /*
     |--------------------------------------------------------------------------
     | Customer Profile

@@ -38,7 +38,6 @@ class AttendanceController extends Controller
             if ($att->attendance_date) {
                 $events[] = [
                     'title' => ($att->instructor->user->name ?? 'Unknown') . ' - Attended',
-                    // ပြင်ဆင်ထားသောအပိုင်း: Asia/Yangon Timezone ထည့်သွင်းခြင်း
                     'start' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d H:i:s') : $att->attendance_date,
                     'color' => '#28a745',
                     'recorded_at' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d h:i A') : null,
@@ -92,7 +91,6 @@ class AttendanceController extends Controller
                 'person_name' => $personName,
                 'class_name' => $att->class->class_name ?? 'Unknown Class',
                 'attendance_date' => $att->attendance_date,
-                // ပြင်ဆင်ထားသောအပိုင်း: Asia/Yangon Timezone ထည့်သွင်းခြင်း
                 'recorded_at' => $att->created_at ? $att->created_at->timezone('Asia/Yangon')->format('Y-m-d h:i A') : null,
                 'is_paid' => $att->is_paid ? 'Paid' : 'Unpaid',
                 'attendance_id' => $att->id,
@@ -249,7 +247,7 @@ class AttendanceController extends Controller
         $instructorId = $request->instructor_id;
         $attendanceDate = $request->attendance_date;
 
-        $instructorAttendance = Attendance::updateOrCreate(
+        Attendance::updateOrCreate(
             [
                 'class_id' => $classId,
                 'attendance_date' => $attendanceDate,
@@ -258,6 +256,7 @@ class AttendanceController extends Controller
             ],
             [
                 'attended' => true,
+                'fee_amount' => 0, // Handled dynamically in reports
             ]
         );
 
@@ -269,33 +268,7 @@ class AttendanceController extends Controller
                 ->distinct()
                 ->get();
 
-            $classObj = ClassSchedule::find($classId);
-            $categoryId = $classObj?->category_id;
-
-            $classInstructor = Instructor::with('categoryFees')->find($instructorId);
-            $categoryFeeSetting = null;
-            if ($classInstructor && $categoryId) {
-                $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
-            }
-
             foreach ($existingStudentAttendances as $studentAtt) {
-                $booking = Booking::with('package')
-                    ->where('selected_class_id', $classId)
-                    ->where('registered_id', $studentAtt->client_id)
-                    ->where('status', 'confirmed')
-                    ->first();
-
-                $packagePrice = $booking?->package?->price ?? 0;
-                $calculatedFee = 0;
-
-                if ($categoryFeeSetting) {
-                    if ($categoryFeeSetting->fee_type === 'percentage') {
-                        $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
-                    } elseif ($categoryFeeSetting->fee_type === 'fixed') {
-                        $calculatedFee = $categoryFeeSetting->fee_value;
-                    }
-                }
-
                 Attendance::updateOrCreate(
                     [
                         'class_id' => $classId,
@@ -305,28 +278,15 @@ class AttendanceController extends Controller
                     ],
                     [
                         'attended' => true,
-                        'fee_amount' => $calculatedFee,
+                        'fee_amount' => 0, // Handled dynamically in reports
                         'admin_approve' => true,
                         'is_paid' => false,
                     ]
                 );
             }
-
-            $totalStudents = Attendance::where('class_id', $classId)
-                ->where('attendance_date', $attendanceDate)
-                ->whereNotNull('client_id')
-                ->count();
-
-            if ($categoryFeeSetting && $categoryFeeSetting->bonus_threshold > 0) {
-                if ($totalStudents >= $categoryFeeSetting->bonus_threshold) {
-                    $instructorAttendance->update(['fee_amount' => $categoryFeeSetting->bonus_amount]);
-                } else {
-                    $instructorAttendance->update(['fee_amount' => 0]);
-                }
-            }
         }
 
-        return back()->with('success', 'Instructor attendance recorded and retroactive fees applied!');
+        return back()->with('success', 'Instructor attendance recorded!');
     }
 
     public function cancelInTime(Request $request)
@@ -393,40 +353,12 @@ class AttendanceController extends Controller
             return back()->with('error', $msg);
         }
 
-        $classObj = ClassSchedule::with('category')->find($classId);
-        $categoryId = $classObj?->category_id;
-
-        $instructorIds = $checkedInTeachers->pluck('instructor_id')->unique();
-        $instructors = Instructor::with('categoryFees')
-            ->whereIn('id', $instructorIds)
-            ->get()
-            ->keyBy('id');
-
         foreach ($request->client_ids as $clientId) {
-            $booking = Booking::with('package')
-                ->where('registered_id', $clientId)
-                ->where('selected_class_id', $classId)
-                ->where('status', 'confirmed')
-                ->first();
-
-            $packagePrice = $booking?->package?->price ?? 0;
-
             foreach ($checkedInTeachers as $teacherAtt) {
                 $teacherId = $teacherAtt->instructor_id;
-                $classInstructor = $instructors->get($teacherId);
-                $calculatedFee = 0;
 
-                if ($classInstructor && $categoryId) {
-                    $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
-                    if ($categoryFeeSetting) {
-                        if ($categoryFeeSetting->fee_type === 'percentage') {
-                            $calculatedFee = ($packagePrice * $categoryFeeSetting->fee_value) / 100;
-                        } elseif ($categoryFeeSetting->fee_type === 'fixed') {
-                            $calculatedFee = $categoryFeeSetting->fee_value;
-                        }
-                    }
-                }
-
+                // Set calculated fee to 0 on standard checkins
+                // True payouts are aggregated dynamically in ReportController
                 Attendance::updateOrCreate(
                     [
                         'class_id' => $classId,
@@ -436,34 +368,14 @@ class AttendanceController extends Controller
                     ],
                     [
                         'attended' => true,
-                        'fee_amount' => $calculatedFee,
+                        'fee_amount' => 0,
                         'is_paid' => false,
                     ]
                 );
             }
         }
 
-        $totalStudents = Attendance::where('class_id', $classId)
-            ->where('attendance_date', $attendanceDate)
-            ->whereNotNull('client_id')
-            ->count();
-
-        foreach ($checkedInTeachers as $teacherAtt) {
-            $classInstructor = $instructors->get($teacherAtt->instructor_id);
-            if ($classInstructor && $categoryId) {
-                $categoryFeeSetting = $classInstructor->categoryFees->firstWhere('category_id', $categoryId);
-                if ($categoryFeeSetting && $categoryFeeSetting->bonus_threshold > 0) {
-                    if ($totalStudents >= $categoryFeeSetting->bonus_threshold) {
-                        $teacherAtt->update(['fee_amount' => $categoryFeeSetting->bonus_amount]);
-                    } else {
-                        $teacherAtt->update(['fee_amount' => 0]);
-                    }
-                }
-            }
-        }
-
         $successMsg = 'Client Attendance checked in successfully!';
-
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['status' => 'success', 'message' => $successMsg], 200);
         }
