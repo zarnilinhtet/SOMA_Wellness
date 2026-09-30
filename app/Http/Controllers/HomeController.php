@@ -16,7 +16,6 @@ use App\Models\Purchase;
 use App\Models\CloseDate;
 use App\Models\User;
 use App\Models\UserPackageDiscount;
-use App\Models\Workshop;
 use App\Models\Attendance;
 use App\Notifications\AdminNotification;
 use Carbon\Carbon;
@@ -26,14 +25,29 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Resend\Laravel\Facades\Resend;
-use App\Mail\OrderShipped;
 
 class HomeController extends Controller
 {
     public function index()
     {
-        $workshops = Workshop::latest()->paginate(5);
+        // Category Name 'Workshop' ဖြင့် ရှာဖွေခြင်း
+        $category = Category::where('name', 'Workshop')->first();
+
+        if ($category) {
+            $workshops = ClassSchedule::where(function ($q) use ($category) {
+                $q->whereJsonContains('category_ids', (string) $category->id)
+                    ->orWhereJsonContains('category_ids', (int) $category->id);
+            })
+                ->where('status', '!=', 'cancelled')
+                ->latest()
+                ->take(5)
+                ->get();
+        } else {
+            $workshops = collect();
+        }
+
         $closeDate = CloseDate::latest()->first();
+
         return view('frontend.index', compact('workshops', 'closeDate'));
     }
 
@@ -47,8 +61,7 @@ class HomeController extends Controller
             ->pluck('class_id')
             ->toArray();
 
-        $dbClasses = ClassSchedule::with(['category'])
-            ->where('status', '!=', 'cancelled')
+        $dbClasses = ClassSchedule::where('status', '!=', 'cancelled')
             ->where('status', '!=', 'completed')
             ->whereDate('start_date', '<=', $today)
             ->where(function ($q) use ($today) {
@@ -104,7 +117,7 @@ class HomeController extends Controller
 
     public function classDetails(Request $request)
     {
-        $class = ClassSchedule::with('category')->findOrFail($request->id);
+        $class = ClassSchedule::findOrFail($request->id);
 
         $ids = is_string($class->instructor_ids) ? json_decode($class->instructor_ids, true) : ($class->instructor_ids ?? []);
         if (!is_array($ids)) $ids = [$ids];
@@ -149,8 +162,7 @@ class HomeController extends Controller
             ->pluck('class_id')
             ->toArray();
 
-        $query = ClassSchedule::with(['category'])
-            ->where('status', '!=', 'cancelled')
+        $query = ClassSchedule::where('status', '!=', 'cancelled')
             ->where('status', '!=', 'completed')
             ->whereDate('start_date', '<=', $toDate)
             ->where(function ($q) use ($fromDate) {
@@ -160,15 +172,16 @@ class HomeController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('class_name', 'like', "%{$search}%")
-                    ->orWhereHas('category', function ($innerQ) use ($search) {
-                    $innerQ->where('name', 'like', "%{$search}%");
-                    });
+                $q->where('class_name', 'like', "%{$search}%");
             });
         }
 
         if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
+            $catId = $request->category;
+            $query->where(function ($q) use ($catId) {
+                $q->whereJsonContains('category_ids', (string)$catId)
+                    ->orWhereJsonContains('category_ids', (int)$catId);
+            });
         }
 
         if ($request->filled('instructor')) {
@@ -299,7 +312,7 @@ class HomeController extends Controller
         $fromDate = $request->input('from_date', $defaultStartDate);
         $toDate = $request->input('to_date', $defaultEndDate);
 
-        $schedules = ClassSchedule::with(['category', 'bookings.user'])
+        $schedules = ClassSchedule::with(['bookings.user'])
             ->whereDate('start_date', '>=', $fromDate)
             ->whereDate('start_date', '<=', $toDate)
             ->orderBy('start_date')
@@ -466,13 +479,11 @@ class HomeController extends Controller
         $userId = auth()->id();
         $tab = $request->input('tab', 'rates');
 
-        // 1. Get All Purchases (DataTables handles Pagination on Frontend)
         $purchases = Purchase::with('package.category')
             ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Check Queued / Active logic
         $realActiveIds = [];
         $allValid = Purchase::with('package')
             ->where('registered_id', $userId)
@@ -518,8 +529,7 @@ class HomeController extends Controller
             }
         });
 
-        // 2. Get All Classes (Bookings) (DataTables handles Pagination on Frontend)
-        $classes = Booking::with(['classSchedule.category'])
+        $classes = Booking::with(['classSchedule'])
             ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -593,7 +603,7 @@ class HomeController extends Controller
                     ->where('fix_expires_at', '>=', now())
                     ->orWhereRaw('class_remaining < (SELECT class_count FROM packages WHERE id = purchases.selected_packages_id)');
             })
-            ->orderBy('created_at', 'asc') // Queued ဖြစ်နေသည်များကို အစဉ်လိုက်ရွေးချယ်ရန်
+            ->orderBy('created_at', 'asc')
             ->first();
 
         if (!$activePurchase) {
@@ -711,7 +721,7 @@ class HomeController extends Controller
     {
         $userId = auth()->id();
 
-        $bookings = Booking::with(['classSchedule.category'])
+        $bookings = Booking::with(['classSchedule'])
             ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -736,17 +746,16 @@ class HomeController extends Controller
 
         return view('frontend.class_history', compact('bookings'));
     }
+
     public function myPackageHistory(Request $request)
     {
         $userId = auth()->id();
 
-        // Get All Purchases for the user
         $purchases = Purchase::with('package.category')
             ->where('registered_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Check Queued / Active logic
         $realActiveIds = [];
         $allValid = Purchase::with('package')
             ->where('registered_id', $userId)
@@ -774,7 +783,6 @@ class HomeController extends Controller
             $expiryDate = $purchase->expires_at ? Carbon::parse($purchase->expires_at) : null;
             $fixExpiryDate = $purchase->fix_expires_at ? Carbon::parse($purchase->fix_expires_at) : null;
 
-            // Determine if Finished
             if (strtolower($purchase->status ?? '') === 'finished') {
                 $purchase->is_finished = true;
             } elseif (strtolower($purchase->pay_status) === 'confirmed') {
@@ -785,7 +793,6 @@ class HomeController extends Controller
                 if ($fixExpiryDate && $fixExpiryDate->isPast()) $purchase->is_finished = true;
             }
 
-            // Determine if Queued
             if ($packageModel && $purchase->class_remaining > 0 && !$purchase->is_active_now && strtolower($purchase->pay_status) === 'confirmed' && !$purchase->is_finished) {
                 $purchase->is_queued = true;
                 if ($purchase->fix_expires_at) {
@@ -794,7 +801,6 @@ class HomeController extends Controller
             }
         });
 
-        // View အသစ်သို့ return ပြန်ပါမည်
         return view('frontend.package_history', compact('purchases'));
     }
 }

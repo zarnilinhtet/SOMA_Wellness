@@ -11,9 +11,8 @@ class ClassSchedule extends Model
 
     protected $fillable = [
         'instructor_ids',
-        'category_id',
-        'class_name',
         'category_ids',
+        'class_name',
         'description',
         'image_1',
         'image_2',
@@ -29,27 +28,32 @@ class ClassSchedule extends Model
 
     protected $casts = [
         'instructor_ids' => 'array',
+        'category_ids' => 'array',
         'days' => 'array',
     ];
+
     public function instructor()
     {
-        return $this->hasMany(Instructor::class,'instructor_id','instructor_ids');
+        return $this->hasMany(Instructor::class, 'instructor_id', 'instructor_ids');
     }
 
-    // Category နှင့် ချိတ်ဆက်မှု
+    // Custom Category relationship using category_ids JSON array
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id', 'id')->withDefault();
     }
 
-    // Bookings နှင့် ချိတ်ဆက်မှု
-    // public function bookings()
-    // {
-    //     return $this->hasMany(Booking::class, 'selected_class_id');
-    // }
+    // Helper method to get categories collection
+    public function getCategoriesAttribute()
+    {
+        $ids = is_string($this->category_ids) ? json_decode($this->category_ids, true) : ($this->category_ids ?? []);
+        if (!is_array($ids)) $ids = [$ids];
+
+        return Category::whereIn('id', $ids)->get();
+    }
+
     public function bookings()
     {
-        // Assuming 'status' contains values like 'active', 'completed', or 'cancelled'
         return $this->hasMany(Booking::class, 'selected_class_id', 'id')
             ->where('status', '!=', 'cancelled');
     }

@@ -678,13 +678,31 @@
         // ====================================================
 
         @php
-            $mappedInstructors = $instructors->map(function($inst) {
+            $mappedInstructors = $instructors->map(function($inst) use ($categories) {
+                // Parse the specialty column (e.g. ["Yoga"], ["Workshop"])
+                $specialties = is_string($inst->specialty) ? json_decode($inst->specialty, true) : (is_array($inst->specialty) ? $inst->specialty : []);
+                
+                // Map the specialty text names to Category IDs
+                $specialtyCatIds = [];
+                if (!empty($specialties)) {
+                    $specialtyCatIds = $categories->whereIn('name', $specialties)
+                                                  ->pluck('id')
+                                                  ->map(fn($id) => (string) $id)
+                                                  ->toArray();
+                }
+
+                // Fallback to categoryFees (If some data are still saved via categoryFees)
+                $feeCatIds = $inst->categoryFees 
+                    ? $inst->categoryFees->pluck('category_id')->map(fn($id) => (string) $id)->toArray() 
+                    : [];
+
+                // Merge both and remove duplicates
+                $mergedCatIds = array_values(array_unique(array_merge($specialtyCatIds, $feeCatIds)));
+
                 return [
                     'id' => (string) $inst->id,
                     'name' => $inst->user->name ?? 'Unknown',
-                    'category_ids' => $inst->categoryFees 
-                        ? $inst->categoryFees->pluck('category_id')->map(function($id) { return (string) $id; })->toArray() 
-                        : []
+                    'category_ids' => $mergedCatIds
                 ];
             })->values();
         @endphp
@@ -729,10 +747,10 @@
             // 3. Clear existing options in Select
             instructorSelect.empty();
 
-            // 4. Filter Instructors strictly by Category Fees (Rates & Bonuses)
+            // 4. Filter Instructors strictly by linked Categories
             if (categoryIds.length > 0) {
                 let validInstructors = instructorsData.filter(inst => {
-                    // Check if Instructor has AT LEAST ONE of the selected categories in their rates
+                    // Check if Instructor has AT LEAST ONE of the selected categories
                     return categoryIds.some(id => inst.category_ids.includes(String(id)));
                 });
 

@@ -304,7 +304,7 @@
                                     
                                     <td>
                                         <h4 class="class-main-title">{{ $class->class_name }}</h4>
-                                        <div class="badge-status-active-text">{{ $class->category->name }}</div>
+                                        <div class="badge-status-active-text">{{ $class->category->name ?? ''}}</div>
                                         
                                         @if ($class->status == 'cancelled')
                                             <span class="status-pill pill-cancelled">Cancelled</span>

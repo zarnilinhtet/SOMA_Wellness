@@ -11,6 +11,7 @@ use App\Http\Controllers\EarningsController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\InstructorPaymentController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\PageController;
@@ -172,17 +173,17 @@ Route::middleware('auth')->group(function () {
         UserController::class,
         'usersWithPackages'
     ])->name('user.with_packages');
-
+    Route::get('/users/expiring-packages', [\App\Http\Controllers\UserController::class, 'expiringPackages'])->name('user.expiring.packages');
     Route::get('/user/{id}/package/index', [
         UserController::class,
         'userPackageDetails'
     ])->name('user.package.details');
-
+    Route::get('/users/absent', [\App\Http\Controllers\UserController::class, 'absentUsers'])->name('user.absent');
     Route::post('/user-register/reset-password', [
         UserController::class,
         'resetPassword'
     ])->name('user_register.reset_password');
-
+    Route::get('/user/{id}/attendance-history', [UserController::class, 'getAttendanceHistory'])->name('user.attendance.history');
 
     /*
     |--------------------------------------------------------------------------
@@ -577,6 +578,9 @@ Route::middleware([
         InstructorController::class,
         'destroy'
     ])->name('instructors.destroy');
+
+    Route::post('instructor-payments/{instructor}', [InstructorPaymentController::class, 'store'])->name('instructor-payments.store');
+    Route::delete('instructor-payments/{payment}', [InstructorPaymentController::class, 'destroy'])->name('instructor-payments.destroy');
 });
 
 
@@ -1050,11 +1054,12 @@ Route::middleware([
         ReportController::class,
         'getCustomerReport'
     ])->name('customer.report');
-
+    Route::get('/instructor-reports/detail/{id}/pdf', [ReportController::class, 'downloadInstructorReportPdf'])->name('instructor.report.pdf');
     Route::get('/get/customer/report/{id}', [
         ReportController::class,
         'getCustomerPackagesAjax'
     ])->name('customer.packages.report');
+    Route::get('/instructor-reports/detail/{id}', [ReportController::class, 'showInstructorReportDetail'])->name('instructor.report.detail');
 });
 
 

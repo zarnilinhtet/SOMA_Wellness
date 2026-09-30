@@ -412,9 +412,9 @@
                     <div class="col-12 col-lg-6">
                         <div class="meta-content-panel">
 
-                            <span class="category-premium-pill">
+                            {{-- <span class="category-premium-pill">
                                 {{ $class->category->name }}
-                            </span>
+                            </span> --}}
 
                             <h1>{{ $class->class_name }}</h1>
 

@@ -1,67 +1,116 @@
-@include('master.header')
-@include('master.sidebar')
-@include('master.nav')
+<?php echo view('master.header'); ?>
+<?php echo view('master.sidebar'); ?>
+<?php echo view('master.nav'); ?>
 
-{{-- DataTables Buttons CSS for Excel Export --}}
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+<style>
+    .page-inner { padding-top: 2rem; padding-bottom: 2rem; }
+    .card-custom { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+    .table-custom thead th { background-color: #f8f9fa; color: #495057; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; border-bottom: 2px solid #e9ecef; padding: 15px 8px; vertical-align: middle; white-space: nowrap;}
+    .table-custom tbody td { vertical-align: middle; padding: 12px 8px; color: #333; border-bottom: 1px solid #f1f3f5; font-size: 0.9rem;}
+    .badge-soft-primary { background-color: #e0eaff; color: #3d6cb9; border: 1px solid #c2d5ff; }
+    .badge-soft-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-soft-secondary { background-color: #e9ecef; color: #495057; }
+    .btn-excel { background-color: #107c41 !important; color: white !important; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-excel:hover { background-color: #0b5e31 !important; }
+</style>
 
 <div class="container">
     <div class="page-inner">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="fw-bold">Manage Instructor Reports</h4>
+        
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+            <div>
+                <h4 class="fw-bold mb-1 text-dark"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Instructor Payroll Reports</h4>
+                <p class="text-muted mb-0 small">Overview of instructor salaries and class earnings based on selected date.</p>
+            </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <!-- Date Filter Card -->
+        <div class="card card-custom mb-4">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="basic-datatables">
-                        <thead class="table-light">
+                <form method="GET" action="{{ route('instructor.report') }}" class="row align-items-end g-3">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small fw-bold">Date From</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small fw-bold">Date To</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-2"></i> Filter Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card card-custom">
+            <div class="card-body p-0">
+                <div class="table-responsive p-3">
+                    <table class="table table-custom w-100" id="basic-datatables">
+                        <thead>
                             <tr>
                                 <th>No.</th>
                                 <th>Instructor Name</th>
                                 <th>Type</th>
-                                <th>Full Time Base Salary</th>
-                                <th>Class Earnings (Bonus / % Fee)</th>
-                                <th>Total Classes</th>
-                                <th>Grand Total (Total Salary)</th>
+                                <th class="text-center">Total Clients</th>
+                                <th class="text-end">Maint. Fee</th>
+                                <th class="text-end">Base Salary</th>
+                                <th class="text-end">Class Earning</th>
+                                <th class="text-end text-success">Grand Total</th>
+                                <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($instructors as $instructor)
-                                @if($instructor)
+                            <?php $iteration = 1; ?>
+                            <?php foreach ($instructors as $instructor): ?>
+                                <?php if($instructor): ?>
                                     <tr>
-                                        <td>{{ $loop->iteration }}</td>
+                                        <td class="text-muted"><?= $iteration++ ?></td>
                                         <td>
-                                            <a href="javascript:void(0)" class="fw-bold text-primary show-instructor-details"
-                                                data-id="{{ $instructor['id'] ?? '' }}" 
-                                                data-name="{{ $instructor['name'] ?? 'Unknown' }}"
-                                                style="text-decoration: none; cursor: pointer;">
-                                                <i class="fas fa-user-circle me-1"></i> {{ $instructor['name'] ?? 'Unknown' }}
-                                            </a>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                    <i class="fas fa-user small"></i>
+                                                </div>
+                                                <span class="fw-bold" style="white-space: nowrap;"><?= htmlspecialchars($instructor['name'] ?? 'Unknown') ?></span>
+                                            </div>
                                         </td>
                                         <td>
-                                            <span class="badge {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'bg-primary' : 'bg-warning text-dark' }}">
-                                                <i class="fas {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'fa-user-tie' : 'fa-user-clock' }} me-1"></i>
-                                                {{ ($instructor['type'] ?? 'full_time') == 'full_time' ? 'Full Time' : 'Part Time' }}
+                                            <?php if(($instructor['type'] ?? 'full_time') == 'full_time'): ?>
+                                                <span class="badge badge-soft-primary px-2 py-1 rounded-pill"><i class="fas fa-user-tie me-1"></i> Full Time</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-soft-warning px-2 py-1 rounded-pill"><i class="fas fa-user-clock me-1"></i> Part Time</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-soft-secondary rounded-pill px-3 py-1">
+                                                <i class="fas fa-users me-1 text-muted"></i> <?= $instructor['total_clients'] ?? 0 ?>
                                             </span>
                                         </td>
-                                        <td>
-                                            @if(($instructor['type'] ?? '') == 'full_time')
-                                                <span class="fw-bold text-muted">{{ number_format((float)($instructor['base_salary'] ?? 0)) }} MMK</span>
-                                            @else
+                                        <td class="text-end text-danger fw-bold"><?= number_format((float)($instructor['maintenance_fees'] ?? 0)) ?></td>
+                                        <td class="text-end">
+                                            <?php if(($instructor['type'] ?? '') == 'full_time' && ($instructor['base_salary'] ?? 0) > 0): ?>
+                                                <span class="text-dark fw-bold"><?= number_format((float)($instructor['base_salary'] ?? 0)) ?></span>
+                                            <?php else: ?>
                                                 <span class="text-muted">-</span>
-                                            @endif
+                                            <?php endif; ?>
                                         </td>
-                                        <td>
-                                            {{ number_format((float)($instructor['class_earnings'] ?? 0)) }} MMK
+                                        <td class="text-end text-primary fw-bold"><?= number_format((float)($instructor['class_earnings'] ?? 0)) ?></td>
+                                        <td class="text-end">
+                                            <div class="fw-bold text-success" style="font-size: 1.05rem;">
+                                                <?= number_format((float)($instructor['grand_total'] ?? 0)) ?>
+                                            </div>
                                         </td>
-                                        <td><span class="badge bg-secondary">{{ $instructor['total_classes'] ?? 0 }}</span></td>
-                                        <td class="fw-bold text-success fs-6">
-                                            {{ number_format((float)($instructor['grand_total'] ?? 0)) }} MMK
+                                        <td class="text-center">
+                                            <!-- Action View Button -->
+                                            <a href="{{ route('instructor.report.detail', ['id' => $instructor['id'], 'start_date' => $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'), 'end_date' => $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d')]) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                <i class="fas fa-eye me-1"></i> View
+                                            </a>
                                         </td>
                                     </tr>
-                                @endif
-                            @endforeach
+                                <?php endif; ?>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -70,42 +119,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="instructorPackagesModal" tabindex="-1" aria-labelledby="instructorPackagesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="instructorPackagesModalLabel">
-                    Class Summary For <span id="modalinstructorName"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="max-height: 550px; overflow-y: auto;">
-                <div id="loadingSpinner" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                <div id="packagesContainer" class="d-none">
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@include('master.footer')
-
-<style>
-    .show-instructor-details:hover { opacity: 0.8; text-decoration: underline !important; }
-    .modal-body::-webkit-scrollbar { width: 6px; }
-    .modal-body::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-    .modal-body::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-    .modal-body::-webkit-scrollbar-thumb:hover { background: #555; }
-    .btn-excel { background-color: #107c41 !important; color: white !important; border: none; border-radius: 5px; padding: 5px 15px; font-weight: 500; }
-    .btn-excel:hover { background-color: #0b5e31 !important; }
-</style>
+<?php echo view('master.footer'); ?>
 
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
@@ -116,99 +130,18 @@
     $(document).ready(function () {
         if ($('#basic-datatables').length) {
             $('#basic-datatables').DataTable({
-                "order": [[0, "desc"]],
-                "dom": '<"row mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
+                "order": [[0, "asc"]],
+                "pageLength": 25,
+                "dom": '<"row mb-4 align-items-center"<"col-md-6 d-flex align-items-center gap-3"lB><"col-md-6"f>>rt<"row mt-3"<"col-md-6"i><"col-md-6"p>>',
                 "buttons": [
                     {
                         extend: 'excelHtml5',
-                        text: '<i class="fas fa-file-excel me-1"></i> Export Instructors Summary',
+                        text: '<i class="fas fa-file-excel"></i> Export Summary',
                         className: 'btn btn-excel btn-sm',
-                        title: 'Instructor Summary Report'
+                        title: 'Instructor_Payroll_Summary_' + new Date().toISOString().split('T')[0]
                     }
                 ]
             });
         }
-
-        $(document).on('click', '.show-instructor-details', function () {
-            let userId = $(this).data('id');
-            let userName = $(this).data('name');
-
-            $('#modalinstructorName').text(userName);
-            $('#instructorPackagesModal').modal('show');
-            $('#loadingSpinner').removeClass('d-none');
-            $('#packagesContainer').addClass('d-none').empty();
-
-            $.ajax({
-                url: '{{ route("instructor.packages.report", ":id") }}'.replace(':id', userId),
-                type: 'GET',
-                success: function (response) {
-                    $('#loadingSpinner').addClass('d-none');
-                    if (response && response.length > 0) {
-                        let html = `
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle w-100" id="modal-datatables">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>No.</th>
-                                        <th>Class Name</th>
-                                        <th>Start Date</th>
-                                        <th>End Date</th>
-                                        <th>Time</th>
-                                        <th>Total Clients</th>
-                                        <th>Class Earnings (Bonus/Fee)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-
-                        response.forEach(function (res, index) {
-                            html += `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${res.class_name ? res.class_name : 'N/A'}</td>
-                                <td>${res.start_date || '-'}</td>
-                                <td>${res.end_date || '-'}</td>
-                                <td>${res.time || '-'}</td>
-                                <td><span class="badge bg-secondary">${res.total_clients || '0'}</span></td>
-                                <td class="fw-bold text-primary">${res.total_fee ? Number(res.total_fee).toLocaleString() : '0'} MMK</td>
-                            </tr>`;
-                        });
-
-                        html += `</tbody></table></div>`;
-
-                        $('#packagesContainer').html(html).removeClass('d-none');
-
-                        if ($('#modal-datatables').length) {
-                            $('#modal-datatables').DataTable({
-                                "order": [[0, "desc"]],
-                                "destroy": true, 
-                                "dom": '<"row mb-3"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
-                                "buttons": [
-                                    {
-                                        extend: 'excelHtml5',
-                                        text: '<i class="fas fa-file-excel me-1"></i> Export Instructor Details',
-                                        className: 'btn btn-excel btn-sm',
-                                        title: userName + ' - Classes Report'
-                                    }
-                                ]
-                            });
-                        }
-                    } else {
-                        $('#packagesContainer').html(`
-                            <div class="alert alert-warning text-center my-3">
-                                <i class="fas fa-exclamation-circle me-2"></i> No data found for this instructor.
-                            </div>
-                        `).removeClass('d-none');
-                    }
-                },
-                error: function () {
-                    $('#loadingSpinner').addClass('d-none');
-                    $('#packagesContainer').html(`
-                        <div class="alert alert-danger text-center my-3" role="alert">
-                            <i class="fas fa-times-circle me-2"></i> Failed to load data. Please try again.
-                        </div>
-                    `).removeClass('d-none');
-                }
-            });
-        });
     });
 </script>

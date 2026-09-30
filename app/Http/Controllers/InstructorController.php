@@ -14,7 +14,7 @@ class InstructorController extends Controller
 {
     public function index()
     {
-        $instructors = Instructor::with(['user', 'categoryFees.category'])->get();
+        $instructors = Instructor::with(['user', 'categoryFees.category', 'payments'])->get();
         $categories = Category::all();
         $instRole = User::role('Instructor')->latest()->get();
 
@@ -32,6 +32,10 @@ class InstructorController extends Controller
             'instructor_type' => 'required|in:full_time,part_time',
             'specialty' => 'nullable|array',
             'category_fees' => 'nullable|array',
+            'payment_date' => 'nullable|string',
+            'payment_method' => 'nullable|string',
+            'maintenance_fees' => 'nullable|numeric',
+            'class_teaching_fees' => 'nullable|numeric',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -39,6 +43,10 @@ class InstructorController extends Controller
                 'instructor_id' => $request->instructor_id,
                 'instructor_type' => $request->instructor_type,
                 'specialty' => $request->has('specialty') ? json_encode($request->specialty) : null,
+                'payment_date' => $request->payment_date,
+                'payment_method' => $request->payment_method,
+                'maintenance_fees' => $request->maintenance_fees ?? 0,
+                'class_teaching_fees' => $request->class_teaching_fees ?? 0,
             ]);
 
             $this->saveCategoryFees($instructor->id, $request->category_fees);
@@ -58,6 +66,10 @@ class InstructorController extends Controller
             'instructor_type' => 'required|in:full_time,part_time',
             'specialty' => 'nullable|array',
             'category_fees' => 'nullable|array',
+            'payment_date' => 'nullable|string',
+            'payment_method' => 'nullable|string',
+            'maintenance_fees' => 'nullable|numeric',
+            'class_teaching_fees' => 'nullable|numeric',
         ]);
 
         DB::transaction(function () use ($request, $instructor) {
@@ -65,6 +77,10 @@ class InstructorController extends Controller
                 'instructor_id' => $request->instructor_id,
                 'instructor_type' => $request->instructor_type,
                 'specialty' => $request->has('specialty') ? json_encode($request->specialty) : null,
+                'payment_date' => $request->payment_date,
+                'payment_method' => $request->payment_method,
+                'maintenance_fees' => $request->maintenance_fees ?? 0,
+                'class_teaching_fees' => $request->class_teaching_fees ?? 0,
             ]);
 
             InstructorCategoryFee::where('instructor_id', $instructor->id)->delete();
@@ -96,17 +112,19 @@ class InstructorController extends Controller
                 $bonuses = [];
                 if (isset($data['bonuses']) && is_array($data['bonuses'])) {
                     foreach ($data['bonuses'] as $bonus) {
-                        if (isset($bonus['threshold']) && $bonus['threshold'] !== '' && isset($bonus['amount']) && $bonus['amount'] !== '') {
+                        if (isset($bonus['min_students']) && $bonus['min_students'] !== '' && isset($bonus['bonus_amount']) && $bonus['bonus_amount'] !== '') {
                             $bonuses[] = [
-                                'threshold' => (int) $bonus['threshold'],
-                                'amount' => (float) $bonus['amount'],
+                                'min_students' => (int) $bonus['min_students'],
+                                'max_students' => isset($bonus['max_students']) && $bonus['max_students'] !== '' ? (int) $bonus['max_students'] : null,
+                                'bonus_type' => $bonus['bonus_type'] ?? 'fixed',
+                                'bonus_amount' => (float) $bonus['bonus_amount'],
                             ];
                         }
                     }
                     if (count($bonuses) > 0) {
-                        // Ensure chronological order
+                        // Sort by minimum students
                         usort($bonuses, function ($a, $b) {
-                            return $a['threshold'] <=> $b['threshold'];
+                            return $a['min_students'] <=> $b['min_students'];
                         });
                     }
                 }
